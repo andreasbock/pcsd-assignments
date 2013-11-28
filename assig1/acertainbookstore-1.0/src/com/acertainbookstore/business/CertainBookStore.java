@@ -264,13 +264,15 @@ public class CertainBookStore implements BookStore, StockManager {
 		class StockBookCompareRating implements Comparator<StockBook> {
 			@Override
 			public int compare(StockBook book0, StockBook book1) {
-				return (int) (book0.getAverageRating() - book1.getAverageRating());
+				return (int) (book1.getAverageRating() - book0.getAverageRating());
 			}
 		}
 		if (numBooks < 0) {
 			throw new BookStoreException("numBooks = " + numBooks
 					+ ", but it must be positive");
-		}// Filter top rated
+		}
+		numBooks = Math.min(numBooks, bookMap.values().size());
+		// Filter top rated
 		List<StockBook> books = getBooks(); // BookStoreException
 		Collections.sort(books, new StockBookCompareRating());
 	
@@ -302,7 +304,7 @@ public class CertainBookStore implements BookStore, StockManager {
 
 	@Override
 	public void rateBooks(Set<BookRating> bookRating) throws BookStoreException {
-		// All or nozing 
+		// All or nothing 
 		for (BookRating rating : bookRating) {
 			if (!(0 <= rating.getRating() && rating.getRating() <= 5)
 			     || !bookMap.containsKey(rating.getISBN())) {

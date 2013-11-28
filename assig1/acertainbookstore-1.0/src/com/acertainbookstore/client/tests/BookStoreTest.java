@@ -20,6 +20,7 @@ import com.acertainbookstore.client.BookStoreHTTPProxy;
 import com.acertainbookstore.client.StockManagerHTTPProxy;
 import com.acertainbookstore.interfaces.BookStore;
 import com.acertainbookstore.interfaces.StockManager;
+import com.acertainbookstore.server.BookStoreHTTPMessageHandler;
 import com.acertainbookstore.utils.BookStoreException;
 
 /**
@@ -31,7 +32,20 @@ public class BookStoreTest {
 	private static boolean localTest = true; 
 	private static StockManager storeManager;
 	private static BookStore client;
+	private static BookStoreHTTPMessageHandler handler;
 
+	public static void startTestServer () {
+		handler = new BookStoreHTTPMessageHandler();
+	}
+	
+	public static void stopTestServer () {
+		try {
+			handler.stop();
+		} catch (Exception e) {
+			// Do nothing
+			e.printStackTrace();
+		}
+	}
 	@BeforeClass
 	public static void setUpBeforeClass() {
 		try {
@@ -47,7 +61,7 @@ public class BookStoreTest {
 			e.printStackTrace();
 		}
 	}
-
+		
 	/**
 	 * Here we want to test buyBooks functionality
 	 * 
@@ -65,6 +79,7 @@ public class BookStoreTest {
 	 */
 	@Test
 	public void testBuyBooks() {
+		startTestServer();
 		Integer testISBN = 300;
 		Integer numCpies = 5;
 		int buyCopies = 2;
@@ -148,6 +163,7 @@ public class BookStoreTest {
 			e.printStackTrace();
 			fail();
 		}
+		stopTestServer();
 	}
 
 	/**
@@ -335,38 +351,84 @@ public class BookStoreTest {
 	@Test
 	public void testGetTopRatedBooks() {
 		Integer testISBN = 600;
-		Set<StockBook> booksToAdd = new HashSet<StockBook>();
-		booksToAdd.add(new ImmutableStockBook(testISBN, "Book Name",
-				"Book Author", (float) 100, 5, 0, 0, 0, false));
-		booksToAdd.add(new ImmutableStockBook(testISBN + 1, "Book Name 1",
-				"Book Author", (float) 100, 5, 0, 0, 0, false));
-
-		try {
-			storeManager.addBooks(booksToAdd);
-		} catch (BookStoreException e) {
-			e.printStackTrace();
-		}
-
-		Set<BookRating> bookRatingList = new HashSet<BookRating>();
-		bookRatingList.add(new BookRating(testISBN, 5));
-		try {
-			client.rateBooks(bookRatingList);
-		} catch (BookStoreException e) {
-			e.printStackTrace();
-			fail();
-		}
-
 		List<Book> books = null;
-		;
+		Set<StockBook> booksToAdd;
+		ImmutableStockBook book0, book1, book2;
+		Set<BookRating> bookRatingList;
+		book0 = new ImmutableStockBook(testISBN, "Book Name",
+			   "Book Author", (float) 100, 5, 0, 0, 0, false);
+		book1 = new ImmutableStockBook(testISBN+1, "Book Name",
+			   "Book Author", (float) 100, 5, 0, 0, 0, false);
+		book2 = new ImmutableStockBook(testISBN+2, "Book Name",
+			   "Book Author", (float) 100, 5, 0, 0, 0, false);
+	
+		startTestServer();
+		// No books added
 		try {
-			books = client.getTopRatedBooks(1);
+			books = client.getTopRatedBooks(5); // 5 top books
+			System.out.println(books.toString());
 		} catch (BookStoreException e1) {
 			e1.printStackTrace();
+//			fail();
+		}
+		assertTrue(books.isEmpty());
+		
+		bookRatingList = new HashSet<BookRating>();
+		bookRatingList.add(new BookRating(testISBN, 5));
+		booksToAdd = new HashSet<StockBook>();
+		booksToAdd.add(book0);
+		// Add and rate
+		try {
+			storeManager.addBooks(booksToAdd);
+			client.rateBooks(bookRatingList);
+			books = client.getTopRatedBooks(1);
+		} catch (BookStoreException e) {
+			e.printStackTrace();
 			fail();
 		}
+		assertEquals(book0, books.get(0));
+		assertEquals(books.size(), 1);
+	
+		// Clean up
+		bookRatingList = new HashSet<BookRating>();
+		booksToAdd = new HashSet<StockBook>();
+		// Add new book with lower rating
+		booksToAdd.add(book1);
+		bookRatingList.add(new BookRating(testISBN+1, 2));
+		
+		// Add and rate
+		try {
+			storeManager.addBooks(booksToAdd);
+			client.rateBooks(bookRatingList);
+			books = client.getTopRatedBooks(1);
+		} catch (BookStoreException e) {
+			e.printStackTrace();
+			fail();
+		}
+		assertEquals(book0, books.get(0));
+		assertEquals(books.size(), 2);
+		
+		// Clean up
+		bookRatingList = new HashSet<BookRating>();
+		booksToAdd = new HashSet<StockBook>();
+		// Add new book with same rating
+		booksToAdd.add(book2);
+		bookRatingList.add(new BookRating(testISBN+1, 5));
+		try {
+			storeManager.addBooks(booksToAdd);
+			client.rateBooks(bookRatingList);
+			books = client.getTopRatedBooks(1);
+		} catch (BookStoreException e) {
+			e.printStackTrace();
+			fail();
+		}
+		assertTrue(book0.equals(books.get(0)) || book1.equals(books.get(0)));
+		assertEquals(books.size(), 3);
+		/*
 		Boolean containsTestBook = false;
-		for (Book book : books) {
-			if (book.getISBN() == testISBN) {
+		for (Book bk : books) {
+			if (bk.getISBN() == testISBN) {
+				System.out.println(bk.getISBN());
 				containsTestBook = true;
 				break;
 			}
@@ -424,7 +486,8 @@ public class BookStoreTest {
 			e.printStackTrace();
 			fail();
 		}
-
+		*/
+		stopTestServer();
 	}
 
 	@AfterClass
