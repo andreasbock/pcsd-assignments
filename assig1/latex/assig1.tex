@@ -55,10 +55,10 @@ Our solution lays out the memory of all the machines in one single address space
 Based on a given address we perform a lookup to map the address to a physical
 machine and a location in its memory. This is trivial as the address must lie 
 in an interval corresponding to some machine. Computing the address would
-then simply be either a lookup or arithmetic ($ localAddress = address - offSet$ )
-This solution allows us to have logarithmic lookup times and for the machines to
-have different memory size. If we had assumed the machines all had equal amounts
-of memory we could have used modulus arithmetic and saved a lookup.
+then simply be either a lookup or arithmetic ($ localAddress = address - offSet$ ).
+This solution allows for logarithmic lookups and for the machines to
+have different sizes of memory. If we had assumed the machines all had equal amounts
+of memory we could have used modulus arithmetic and saved a lookup.\\
 
 %We can use this to avoid having to look up machines in a centralized table, since we can simply
 %calculate what machine and memory unit is referenced using the address. 
@@ -73,13 +73,13 @@ of memory we could have used modulus arithmetic and saved a lookup.
 
 The amount of machines we can reference depends on the
 length of the addresses we use. Our solution scales very well, since the amount of
-referenceable machines will grow exponentially as we add bits to the address.
+referenceable machines will grow exponentially as we add bits to the address.\\
 
 Since the possible input space of addresses is limited to numeric values, any
 values will reference a specific machine. If we get addresses that are shorter
 than expected, we will assume that it must be zero-padded. As such, the naming
-scheme will not fail. Where there actually is a machine corresponding to the
-address is not a concern of the address mapping.
+scheme will not fail, whether or not there actually \emph{is} a live machine
+corresponding to the address is not a concern of the address mapping.\\
 
 %2)
 
@@ -105,15 +105,21 @@ The API and pseudocode for READ and WRITE follows. They both have to calculate t
 \begin{program}
 \mbox{Pseudocode for the TRANSLATE procedure}
        \PROC |TRANSLATE|(address) \BODY
-                 (machineIndex, offSet) := lookupMachine ( adress );
-                 machineOffset := adress \; \text{-} \; \text{offSet};
+                 (machineIndex, offSet) := lookup ( address );
+                 machineOffset := address \; \text{-} \; offSet;
                  %\text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
                  %memoryOffset := lookupOffset ( adress );
                  \text{return} \; \{ machineIndex, machineOffset\} \ENDPROC
 \end{program}
 
-This procedure is essentially the address mapping scheme described in part 1. It is called with an address and always returns an index of which machine is referenced, and the location of the data on the referenced machine. It uses \emph{lookup} that determines which machine corresponds to an address (this is simple as each machine is determined by an address interval) to return
-the machine index (used to determine which communication link to use) and an offset (whatever we need to subtract from the single address space address to obtain the machine's local address).
+This procedure is essentially the address mapping scheme described above. It is
+called with an address and always returns an index of which machine is
+referenced, and the location of the data on the referenced machine. It uses
+\emph{lookup} that determines which machine corresponds to an address (this
+is simple as each machine is determined by an address interval) to return
+the machine index (used to determine which communication link to use) and an
+offset (whatever we need to subtract from the single address space address to
+obtain the machine's local address).
 
 \begin{program}
 \mbox{Pseudocode for the READ procedure}
@@ -144,9 +150,11 @@ with the referenced machine.
 
 
 %3)
-We assume that by ‘regular main memory’, the assignment refers to RAM. READ/WRITE operations against RAM is atomic, if we choose to only write one block of data at a time. If we write several blocks of data, with no regard for synchronization, we risk two processes concurrently reading and writing the data. This hazard is called write tearing. 
+We assume that by ‘regular main memory’, the assignment refers to the RAM of
+the machine in question. READ and WRITE operations against RAM is atomic if
+we choose to only write one block of data at a time. If we write several blocks of data, with no regard for synchronization, we risk two processes concurrently reading and writing the data. This hazard is called write tearing. 
 
-Our solution assumes that operations on each of the machines are performed
+Our solution assumes that operations on each of the machines are indeed performed
 atomically to avoid cases where multiple clients' READ and WRITE results in
 inconsistent states. In other words, we require isolation.
 
@@ -161,10 +169,13 @@ and the machines is bijective.
 However, we can still support hot
 swapping machines, by reassigning the communication link to a machine with cloned
 data (catering to redundancy requirements). However, this jeopardizes requests who
-are already in the pipeline.\\
+are already in the pipeline i.e. being sent over a communication link.\\
 
-To make dynamic joins and leaves possible, we could employ an abstraction layer for every communication link. This layer would have to manage several redundant machines. All writes would be broadcast to all machines, and reads would be sent to any machine. Also, the layer would have to handle copying data to joining machines, to ensure true redundancy. 
-
+To make dynamic joins and leaves possible, we could employ an abstraction layer
+for every communication link. This layer would have to manage several redundant
+machines. All writes would be broadcast to all machines, and reads would be sent
+to any machine. Also, the layer would have to handle copying data to joining
+machines, to ensure true redundancy. 
 This way, any machine can leave, as long as there are redundant machines available.
 
 \section*{Question 2: Techniques for Performance}
@@ -274,6 +285,7 @@ Testing \texttt{getBooksInDemand} is straightforward. We add two new books and p
 
 \section*{Discussion on architecture}
 
+We now address the six points about the architecture.\\
 %1
 The architecture used in this assignment is strongly modular in the sense that
 we can easily add or remove proxies irrespective of what is happening
@@ -306,7 +318,7 @@ server.\\
 
 The StockManager and BookStore clients both use \texttt{SendAndRecv} for communication as defined in the Bookstore’s utility class. This method is implemented using \emph{at-most-once} semantics since each message is only ever send once at the application layer. If the client to server transfer failed then no effect will take place server side. However is it possible that the server receives and processes the message but fails to notify the client. Both of these cases can happen due to timeout, errors or broken connection. Thus the client can only ever know for sure that a message has been processed at most once. It it
 clear why this semantics is preferable for our application; we do not want to risk buying
-a book twice by accident.
+a book twice by accident.\\
 
 
 %4
@@ -323,6 +335,6 @@ In case that the server crashes, the clients would experience failures different
 
 If a caching proxy was used, it is possible that the crash is masked for the client as long as the cache is still fresh. This only happens for cacheable requests, which are deterministic requests that does not change the state of the server (e.g. \texttt{getTopRatedBooks}.\\
 
-The use of web caching should not affect the semantics offered by the bookstore. Caching is supposed to be an optimization, and should therefore not change any semantics and behaviour. The client would, however, be able to use the ‘Cache-Control’ header in the HTTP protocol to bypass the cache.\\
+The use of web caching should not affect the semantics offered by the bookstore. Caching is supposed to be an optimization, and should therefore not change any semantics and behaviour. The client would, however, be able to use the \texttt{Cache-Control} header in the HTTP protocol to bypass the cache.\\
 
 \end{document}
