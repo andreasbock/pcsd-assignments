@@ -48,6 +48,9 @@ public class BookStoreTest {
 	}
 	@BeforeClass
 	public static void setUpBeforeClass() {
+		
+		startTestServer();
+		
 		try {
 			if (localTest) {
 				storeManager = CertainBookStore.getInstance();
@@ -79,7 +82,6 @@ public class BookStoreTest {
 	 */
 	@Test
 	public void testBuyBooks() {
-		startTestServer();
 		Integer testISBN = 300;
 		Integer numCpies = 5;
 		int buyCopies = 2;
@@ -163,7 +165,6 @@ public class BookStoreTest {
 			e.printStackTrace();
 			fail();
 		}
-		stopTestServer();
 	}
 
 	/**
@@ -259,15 +260,22 @@ public class BookStoreTest {
 	 * 2. We rate it using rateBook to certain rating.
 	 * 
 	 * 3. We check if the rating is updated by executing getBooks.
+	 *
+	 * 4. We repeat steps 2 and 3 with another rating to make sure
+	 * 		average ratings are handled correctly
 	 * 
 	 * 4. We also check that the appropriate exception is thrown when rateBook
-	 * is executed with wrong arguments
+	 * 		is executed with wrong arguments
 	 */
 	@Test
 	public void testRateBook() {
 		Integer testISBN = 700;
-		Integer rating = 2;
+		Integer rating = 1;
+		Integer rating2 = 2;
+		Float avgRating = (rating.floatValue() + rating2.floatValue())/2;
+		
 
+		// Add book
 		Set<StockBook> booksToAdd = new HashSet<StockBook>();
 		booksToAdd.add(new ImmutableStockBook(testISBN, "Book Name",
 				"Book Author", (float) 100, 5, 0, 0, 0, false));
@@ -278,6 +286,7 @@ public class BookStoreTest {
 			fail();
 		}
 
+		// Add single rating to the book and test it
 		Set<BookRating> bookRatingList = new HashSet<BookRating>();
 		bookRatingList.add(new BookRating(testISBN, rating));
 		List<StockBook> listBooks = null;
@@ -294,9 +303,28 @@ public class BookStoreTest {
 				break;
 			}
 		}
-
+		
+		// Add another rating to the book and test it
+		bookRatingList = new HashSet<BookRating>();
+		bookRatingList.add(new BookRating(testISBN, rating2));
+		listBooks = null;
+		try {
+			client.rateBooks(bookRatingList);
+			listBooks = storeManager.getBooks();
+		} catch (BookStoreException e1) {
+			e1.printStackTrace();
+			fail();
+		}
+		for (StockBook book : listBooks) {
+			if (book.getISBN() == testISBN) {
+				assertTrue(Math.abs(book.getAverageRating() - avgRating) < 0.5);
+				break;
+			}
+		}
+		
+		// Test exceptions is thrown when rating is negative
 		Boolean exceptionThrown = false;
-		bookRatingList.add(new BookRating(1000000, 6));
+		bookRatingList.add(new BookRating(testISBN, -1));
 		try {
 			client.rateBooks(bookRatingList);
 		} catch (BookStoreException e) {
@@ -311,9 +339,10 @@ public class BookStoreTest {
 			e.printStackTrace();
 			fail();
 		}
-
+		
+		// Test exceptions is thrown when rating is out of range
 		exceptionThrown = false;
-		bookRatingList.add(new BookRating(-1, 6));
+		bookRatingList.add(new BookRating(testISBN, 11));
 		try {
 			client.rateBooks(bookRatingList);
 		} catch (BookStoreException e) {
@@ -327,11 +356,33 @@ public class BookStoreTest {
 			e.printStackTrace();
 			fail();
 		}
+		
+		// Test exceptions is thrown when ISBN does not exist
+		exceptionThrown = false;
+		bookRatingList.add(new BookRating(testISBN, 11));
+		try {
+			client.rateBooks(bookRatingList);
+		} catch (BookStoreException e) {
+			exceptionThrown = true;
+		}
+		assertTrue(exceptionThrown);
+		try {
+			currentList = storeManager.getBooks();
+			assertTrue(currentList.equals(listBooks));
+		} catch (BookStoreException e) {
+			e.printStackTrace();
+			fail();
+		}
+		
+		
 	}
 
 	/**
 	 * 
 	 * Here we want to test getTopRatedBooks functionality
+	 * Thus function assumes no other books in the database with
+	 * rating > 3
+	 * It also assumes <1000 books in the database
 	 * 
 	 * 1. We add two books one with ISBN - testISBN and another with ISBN -
 	 * testISBN + 1.
@@ -355,29 +406,20 @@ public class BookStoreTest {
 		Set<StockBook> booksToAdd;
 		ImmutableStockBook book0, book1, book2;
 		Set<BookRating> bookRatingList;
-		book0 = new ImmutableStockBook(testISBN, "Book Name",
+		book0 = new ImmutableStockBook(testISBN, "Book High",
 			   "Book Author", (float) 100, 5, 0, 0, 0, false);
-		book1 = new ImmutableStockBook(testISBN+1, "Book Name",
+		book1 = new ImmutableStockBook(testISBN+1, "Book Low",
 			   "Book Author", (float) 100, 5, 0, 0, 0, false);
-		book2 = new ImmutableStockBook(testISBN+2, "Book Name",
+		book2 = new ImmutableStockBook(testISBN+2, "Book High2",
 			   "Book Author", (float) 100, 5, 0, 0, 0, false);
 	
-		startTestServer();
-		// No books added
-		try {
-			books = client.getTopRatedBooks(5); // 5 top books
-			System.out.println(books.toString());
-		} catch (BookStoreException e1) {
-			e1.printStackTrace();
-//			fail();
-		}
-		assertTrue(books.isEmpty());
 		
+		
+		// Add a book and a rating
 		bookRatingList = new HashSet<BookRating>();
 		bookRatingList.add(new BookRating(testISBN, 5));
 		booksToAdd = new HashSet<StockBook>();
 		booksToAdd.add(book0);
-		// Add and rate
 		try {
 			storeManager.addBooks(booksToAdd);
 			client.rateBooks(bookRatingList);
@@ -387,16 +429,12 @@ public class BookStoreTest {
 			fail();
 		}
 		assertEquals(book0, books.get(0));
-		assertEquals(books.size(), 1);
 	
-		// Clean up
+		// Add new book with lower rating
 		bookRatingList = new HashSet<BookRating>();
 		booksToAdd = new HashSet<StockBook>();
-		// Add new book with lower rating
 		booksToAdd.add(book1);
-		bookRatingList.add(new BookRating(testISBN+1, 2));
-		
-		// Add and rate
+		bookRatingList.add(new BookRating(testISBN+1, 4));
 		try {
 			storeManager.addBooks(booksToAdd);
 			client.rateBooks(bookRatingList);
@@ -406,14 +444,12 @@ public class BookStoreTest {
 			fail();
 		}
 		assertEquals(book0, books.get(0));
-		assertEquals(books.size(), 2);
 		
-		// Clean up
+		// Add new book with same rating
 		bookRatingList = new HashSet<BookRating>();
 		booksToAdd = new HashSet<StockBook>();
-		// Add new book with same rating
 		booksToAdd.add(book2);
-		bookRatingList.add(new BookRating(testISBN+1, 5));
+		bookRatingList.add(new BookRating(testISBN+2, 5));
 		try {
 			storeManager.addBooks(booksToAdd);
 			client.rateBooks(bookRatingList);
@@ -423,79 +459,49 @@ public class BookStoreTest {
 			fail();
 		}
 		assertTrue(book0.equals(books.get(0)) || book1.equals(books.get(0)));
-		assertEquals(books.size(), 3);
-		/*
-		Boolean containsTestBook = false;
-		for (Book bk : books) {
-			if (bk.getISBN() == testISBN) {
-				System.out.println(bk.getISBN());
-				containsTestBook = true;
-				break;
-			}
-		}
-		assertTrue(containsTestBook);
 
-		bookRatingList = new HashSet<BookRating>();
-		bookRatingList.add(new BookRating(testISBN, 0));
-		bookRatingList.add(new BookRating(testISBN + 1, 4));
+		// Test get multiple highest rated books
 		try {
-			client.rateBooks(bookRatingList);
+			books = client.getTopRatedBooks(3);
 		} catch (BookStoreException e) {
 			e.printStackTrace();
 			fail();
 		}
-
-		try {
-			books = client.getTopRatedBooks(1);
-		} catch (BookStoreException e1) {
-			e1.printStackTrace();
-			fail();
-		}
-		Boolean containsTestBook1 = false;
-		Boolean containsTestBook2 = false;
-		for (Book book : books) {
-			if (book.getISBN() == testISBN)
-				containsTestBook1 = true;
-			if (book.getISBN() == testISBN + 1)
-				containsTestBook2 = true;
-		}
-		assertTrue(containsTestBook2);
-		assertFalse(containsTestBook1);
-
-		List<StockBook> listBooks = null;
-		try {
-			listBooks = storeManager.getBooks();
-		} catch (BookStoreException e) {
-			e.printStackTrace();
-			fail();
-		}
-
+		assertTrue(books.contains(book0) && books.contains(book1) && books.contains(book2));
+		
+		// Test argument negative
 		boolean exceptionThrown = false;
-		bookRatingList.add(new BookRating(testISBN, 6));
 		try {
-			client.rateBooks(bookRatingList);
+			books = client.getTopRatedBooks(-1);
 		} catch (BookStoreException e) {
 			exceptionThrown = true;
 		}
 		assertTrue(exceptionThrown);
-		List<StockBook> currentList = null;
+		
+		// Test get more top rated books than books in store
+		exceptionThrown = false;
 		try {
-			currentList = storeManager.getBooks();
-			assertTrue(currentList.equals(listBooks));
+			books = client.getTopRatedBooks(1010);
 		} catch (BookStoreException e) {
-			e.printStackTrace();
-			fail();
+			exceptionThrown = true;
 		}
-		*/
-		stopTestServer();
+		assertFalse(exceptionThrown);
+		assertTrue(books.size() < 1010);
+		
 	}
 
+	
+	
+	
 	@AfterClass
 	public static void tearDownAfterClass() {
+		
 		if (!localTest) {
 			((BookStoreHTTPProxy) client).stop();
 			((StockManagerHTTPProxy) storeManager).stop();
 		}
+		
+		stopTestServer();
 	}
 
 }
