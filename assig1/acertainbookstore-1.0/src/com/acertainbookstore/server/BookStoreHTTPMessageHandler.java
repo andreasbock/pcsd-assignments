@@ -224,7 +224,7 @@ public class BookStoreHTTPMessageHandler extends AbstractHandler {
 				try {
 					bookStoreresponse.setList(CertainBookStore.getInstance()
 							.getBooksInDemand());
-					CertainBookStore.getInstance().getTopRatedBooks(numBooks);
+					CertainBookStore.getInstance().getBooksInDemand();
 				} catch (BookStoreException ex) {
 					bookStoreresponse.setException(ex);
 				}

@@ -22,6 +22,8 @@ import com.acertainbookstore.client.BookStoreHTTPProxy;
 import com.acertainbookstore.client.StockManagerHTTPProxy;
 import com.acertainbookstore.interfaces.BookStore;
 import com.acertainbookstore.interfaces.StockManager;
+import com.acertainbookstore.server.BookStoreHTTPMessageHandler;
+import com.acertainbookstore.server.BookStoreHTTPServerUtility;
 import com.acertainbookstore.utils.BookStoreException;
 
 /**
@@ -32,14 +34,34 @@ public class StockManagerTest {
 	private static boolean localTest = false;
 	private static StockManager storeManager;
 	private static BookStore client;
+	private static BookStoreHTTPMessageHandler handler;
+	private static Thread ServerThread = null;
 
+	public static void startTestServer () {
+		handler = new BookStoreHTTPMessageHandler();
+		ServerThread = BookStoreHTTPServerUtility.startServerThread(8081, handler);
+	}
+	
+	public static void stopTestServer () {
+		try {
+		//	handler.stop();
+		} catch (Exception e) {
+			// Do nothing
+			e.printStackTrace();
+		}
+		
+		ServerThread.stop();
+	}
+	
 	@BeforeClass
 	public static void setUpBeforeClass() {
+		
 		try {
 			if (localTest) {
 				storeManager = CertainBookStore.getInstance();
 				client = CertainBookStore.getInstance();
 			} else {
+				startTestServer();
 				storeManager = new StockManagerHTTPProxy(
 						"http://localhost:8081/stock");
 				client = new BookStoreHTTPProxy("http://localhost:8081");
@@ -494,6 +516,7 @@ public class StockManagerTest {
 		if (!localTest) {
 			((BookStoreHTTPProxy) client).stop();
 			((StockManagerHTTPProxy) storeManager).stop();
+			stopTestServer ();
 		}
 	}
 }
