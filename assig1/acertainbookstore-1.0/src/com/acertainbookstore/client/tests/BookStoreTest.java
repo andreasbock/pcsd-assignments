@@ -349,13 +349,6 @@ public class BookStoreTest {
 			exceptionThrown = true;
 		}
 		assertTrue(exceptionThrown);
-		try {
-			currentList = storeManager.getBooks();
-			assertTrue(currentList.equals(listBooks));
-		} catch (BookStoreException e) {
-			e.printStackTrace();
-			fail();
-		}
 		
 		// Test exceptions is thrown when ISBN does not exist
 		exceptionThrown = false;
@@ -366,13 +359,38 @@ public class BookStoreTest {
 			exceptionThrown = true;
 		}
 		assertTrue(exceptionThrown);
+		
+		// Test all or nothing semantics
+		// If a single rating add fails
+		// then no books shall have it's rating updated
+		bookRatingList = new HashSet<BookRating>();
+		bookRatingList.add(new BookRating(testISBN, rating2));
+		bookRatingList.add(new BookRating(testISBN, 5));
+		bookRatingList.add(new BookRating(testISBN+1, 10));
+		
+		listBooks = null;
 		try {
-			currentList = storeManager.getBooks();
-			assertTrue(currentList.equals(listBooks));
-		} catch (BookStoreException e) {
-			e.printStackTrace();
-			fail();
+			client.rateBooks(bookRatingList);
+		} catch (BookStoreException e1) {
+			exceptionThrown = true;
 		}
+		assertTrue(exceptionThrown);
+		
+		try {
+			listBooks = storeManager.getBooks();
+		} catch (BookStoreException e1) {
+			e1.printStackTrace();
+			fail();
+		}	
+		for (StockBook book : listBooks) {
+			if (book.getISBN() == testISBN) {
+				assertTrue("Book rating should remain the same", 
+						Math.abs(book.getAverageRating() - avgRating) < 0.5);
+				break;
+			}
+		}
+		
+		
 		
 		
 	}
