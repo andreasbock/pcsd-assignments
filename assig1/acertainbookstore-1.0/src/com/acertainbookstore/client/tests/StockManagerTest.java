@@ -29,7 +29,7 @@ import com.acertainbookstore.utils.BookStoreException;
  *
  */
 public class StockManagerTest {
-	private static boolean localTest = true;
+	private static boolean localTest = false;
 	private static StockManager storeManager;
 	private static BookStore client;
 
@@ -368,11 +368,29 @@ public class StockManagerTest {
 	 * 
 	 * 4. Now we execute storeManager.getBooksInDemand and check that testISBN
 	 * is returned in this call.
+	 * 
+	 * 5. Check that repeating step 1-3 for a new book will make 
+	 *  storeManager.getBooksInDemand return at least two books 
+	 *  including the one added last.
 	 */
 
 	@Test
 	public void testGetBooksInDemand() {
 		Integer testISBN = 500;
+		
+		
+		// Get initial number of books in demand
+		List<StockBook> booksInDemand = null;
+		try {
+			booksInDemand = storeManager.getBooksInDemand();
+		} catch (BookStoreException e) {
+			e.printStackTrace();
+			fail();
+		}
+		int initBooksInDemand = booksInDemand.size();
+		
+		
+		// Add a book
 		Set<StockBook> booksToAdd = new HashSet<StockBook>();
 		booksToAdd.add(new ImmutableStockBook(testISBN, "Book Name",
 				"Book Author", (float) 100, 1, 0, 0, 0, false));
@@ -383,6 +401,7 @@ public class StockManagerTest {
 			fail();
 		}
 
+		// Buy it twice
 		Set<BookCopy> booksToBuy = new HashSet<BookCopy>();
 		booksToBuy.add(new BookCopy(testISBN, 1));
 		try {
@@ -400,7 +419,8 @@ public class StockManagerTest {
 		assertTrue("Trying to buy the book second time should throw exception",
 				notInStockExceptionThrown);
 
-		List<StockBook> booksInDemand = null;
+		// The book should now be in demand
+		booksInDemand = null;
 		try {
 			booksInDemand = storeManager.getBooksInDemand();
 		} catch (BookStoreException e) {
@@ -416,6 +436,57 @@ public class StockManagerTest {
 		}
 		assertTrue("testISBN should be returned by getBooksInDemand",
 				listContainsTestISBN);
+		
+		// Add another book
+		booksToAdd = new HashSet<StockBook>();
+		booksToAdd.add(new ImmutableStockBook(testISBN+1, "Book Name",
+				"Book Author", (float) 100, 1, 0, 0, 0, false));
+		try {
+			storeManager.addBooks(booksToAdd);
+		} catch (BookStoreException e) {
+			e.printStackTrace();
+			fail();
+		}
+		
+		// Buy it twice
+		booksToBuy = new HashSet<BookCopy>();
+		booksToBuy.add(new BookCopy(testISBN+1, 1));
+		try {
+			client.buyBooks(booksToBuy);
+		} catch (BookStoreException e) {
+			e.printStackTrace();
+			fail();
+		}
+		notInStockExceptionThrown = false;
+		try {
+			client.buyBooks(booksToBuy);
+		} catch (BookStoreException e) {
+			notInStockExceptionThrown = true;
+		}
+		assertTrue("Trying to buy the book second time should throw exception",
+				notInStockExceptionThrown);
+
+		// There should now be at least two books in demand
+		// including the book just added
+		booksInDemand = null;
+		try {
+			booksInDemand = storeManager.getBooksInDemand();
+		} catch (BookStoreException e) {
+			e.printStackTrace();
+			fail();
+		}
+		listContainsTestISBN = false;
+		for (StockBook b : booksInDemand) {
+			if (b.getISBN() == testISBN+1) {
+				listContainsTestISBN = true;
+				break;
+			}
+		}
+		assertTrue("testISBN+1 should be returned by getBooksInDemand",
+				listContainsTestISBN);
+		assertTrue("there should be at least two books in demand",
+				booksInDemand.size() == initBooksInDemand+2);
+
 	}
 
 	@AfterClass

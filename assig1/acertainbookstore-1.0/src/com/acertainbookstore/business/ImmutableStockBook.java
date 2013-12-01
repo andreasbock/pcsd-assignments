@@ -56,7 +56,7 @@ public final class ImmutableStockBook extends ImmutableBook implements
 	}
 
 	public float getAverageRating() {
-		return (float) (timesRated == 0 ? -1.0 : totalRating / timesRated);
+		return (float) (timesRated == 0 ? -1.0 : (float)totalRating / (float)timesRated);
 	}
 
 	public boolean isEditorPick() {
