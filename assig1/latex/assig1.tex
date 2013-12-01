@@ -246,7 +246,9 @@ make them available for client applications.\\
 
 \subsection*{Testing}
 
-All testing is done client side against a bookstore server. Since we do not reset the state of the server for each test there are some things that we cannot test against an empty bookstore. Thus failures that arise from performing methods on an empty bookstore cannot be detected by our jUnit tests.
+All testing is done either client side against a bookstore server or locally. After discussion with our TA, we have chosen not to reset the state of the server for each individual test case. Thus failures that arise from performing methods on an empty bookstore are not certain to be detected by our jUnit tests. We observe two reasons for not restarting the server for each test: It is slow restarting the server for each test which become significant when running many tests; and it should be a rare condition that the bookstore is empty. To still test this type of functionality we propose a local only test suite to test boundary cases against an empty bookstore. This is however outside the scope of this assignment.
+
+We still perform a reset each time a suite of unit tests is run. This is done by starting a new server using the new utility function startServerThread. The server can be terminated by stopping the thread. We have created a custom Jetty Connector for our Jetty server that uses the POSIX socket option \texttt{SO\_REUSEADDR}. This way we can easily restart the server reusing the old port.
 
 For \texttt{rateBooks} we test that a rating can be added to a book and then reflected in a subsequent call to \texttt{storeManager.getBooks()}. We also test that adding multiple ratings to a single book will result in a correct average rating. Note that we actually due to this test found an error in source code of BookStoreBook and ImmutableStockBook for function getAverageRating resulting in an incorrect return value. The erroneous behavior was caused by an integer division that should have been a floating point division. The corrected line now reads:
 
@@ -254,7 +256,7 @@ For \texttt{rateBooks} we test that a rating can be added to a book and then ref
 \texttt{return (float) (timesRated == 0 ? -1.0 : (float)totalRating / (float)timesRated);}
 \end{center}
 
-Finally \texttt{testRateBook} also tests that appropriate exceptions are thrown when either the ISBN for a rated book is unknown or a rating is out of range. When an exception is thrown is also tested that all or nothing semantics apply.  
+Finally \texttt{testRateBook} also tests that appropriate exceptions are thrown when either the ISBN for a rated book is unknown or a rating is out of range. When an exception is thrown is also tested that all or nothing semantics apply.
 
 For \texttt{getTopRatedBooks(N)} we test that it always the $n$ books with the highest rating that is returned. Specifically we test that adding a book with lower rating and the same rating as the highest rating does not change the top rated book. We also test that getting multiple highest rated books returns the expected books. We then test that asking for more highest rated books than are present in the bookstore, simply returns a list of all books. Finally we test that a negative argument $n$ throws an exception.
 
