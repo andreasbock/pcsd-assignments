@@ -41,25 +41,39 @@ Lasse Dessau
 
 \section*{Question 1: Fundamental Abstractions}
 
-The described solution is designed to be precisely elaborate enough to solve the
-criteria specified in the assignment. There are techniques that could increase
-both performance and fault tolerance by using redundancy, but this solution does
-not employ those techniques. We designed the solution to be as simple as possible,
-to make it more clear how we solve the described problems. 
+%Our solution is designed to be precisely elaborate enough to solve the
+%criteria specified in the assignment. There are techniques that could increase
+%both performance and fault tolerance by using redundancy, but this solution does
+%not employ those techniques. 
 
+%We designed our solution to be as simple as possible, to make it completely clear
+%how we solve the described problems. 
 
 %1) 
-We assume that all machines contain an equal amount of memory. We can use this
-to avoid having to look up machines in a centralized table, since we can simply
-calculate what machine and memory unit is referenced using the address. It is,
-however, still necessary to look up the communication link in some table, which
-could resemble DNS, but this can be distributed to avoid centralized components.. 
 
-The calculation performs a division to find what machine is referenced, and
-a modulus with a constant size of memory, to find the memory offset on the
-referenced machine. The amount of machines we can reference depends on the
-length of the addresses we use. This scales very well, since the amount of
-referenceable machines will grow exponentially as we add length to the address.
+Our solution lays out the memory of all the machines in one single address space.
+Based on a given address we perform a lookup to map the address to a physical
+machine and a location in its memory. This is trivial as the address must lie 
+in an interval corresponding to some machine. Computing the address would
+then simply be either a lookup or arithmetic ($ localAddress = address - offSet$ )
+This solution allows us to have logarithmic lookup times and for the machines to
+have different memory size. If we had assumed the machines all had equal amounts
+of memory we could have used modulus arithmetic and saved a lookup.
+
+%We can use this to avoid having to look up machines in a centralized table, since we can simply
+%calculate what machine and memory unit is referenced using the address. 
+%
+%It is,
+%however, still necessary to look up the communication link in some table, which
+%could resemble DNS, but this can be distributed to avoid centralized components.. 
+
+%The calculation performs a division to find what machine is referenced, and
+%a modulus with a constant size of memory, to find the memory offset on the
+%referenced machine.
+
+The amount of machines we can reference depends on the
+length of the addresses we use. Our solution scales very well, since the amount of
+referenceable machines will grow exponentially as we add bits to the address.
 
 Since the possible input space of addresses is limited to numeric values, any
 values will reference a specific machine. If we get addresses that are shorter
@@ -67,16 +81,25 @@ than expected, we will assume that it must be zero-padded. As such, the naming
 scheme will not fail. Where there actually is a machine corresponding to the
 address is not a concern of the address mapping.
 
-
 %2)
 
-The API and pseudocode for READ and WRITE follows. They both have to calculate the referenced machine and offset from the address, so they share a common function called TRANSLATE, which also follows.
+The API and pseudocode for READ and WRITE follows. They both have to calculate the referenced machine and offset from the address, so they share a common function called TRANSLATE, which also follows. Note that SEND and RECEIVE are communication primitives.
+
+%\begin{program}
+%\mbox{Pseudocode for the TRANSLATE procedure}
+       %\PROC |TRANSLATE|(address) \BODY
+                 %machineIndex := adress \; \text{div} \; \text{MEMSIZE};
+                 %memoryOffset := adress \; \text{\%} \; \text{MEMSIZE};
+                 %\text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
+%\end{program}
 
 \begin{program}
 \mbox{Pseudocode for the TRANSLATE procedure}
        \PROC |TRANSLATE|(address) \BODY
-                 machineIndex := adress \; \text{div} \; \text{MEMSIZE};
+                 machineIndex := lookupMachine ( adress );
                  memoryOffset := adress \; \text{\%} \; \text{MEMSIZE};
+                 %\text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
+                 %memoryOffset := lookupOffset ( adress );
                  \text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
 \end{program}
 
@@ -90,7 +113,6 @@ This procedure is essentially the address mapping scheme described in part 1. It
                \text{try} \; \text{RECIEVE} (machineIndex, \{data\});
                \text{timeout return} \; TIMEOUT;
                \text{return} \; data \ENDPROC
-%\END
 \end{program}
 
 This procedure will take an address and can return either one memory unit, or an error in case of a timeout from communicating with the referenced machine.
@@ -112,19 +134,29 @@ with the referenced machine.
 
 
 %3)
-We assume that by ‘regular main memory’, the assignment refers to RAM. READ/WRITE operations against RAM is atomic, if we choose to only write one block of data at a time. If we write several blocks of data, with no regard for synchronicity, we risk two processes concurrently reading and writing the data. This hazard is called write tearing. 
+We assume that by ‘regular main memory’, the assignment refers to RAM. READ/WRITE operations against RAM is atomic, if we choose to only write one block of data at a time. If we write several blocks of data, with no regard for synchronization, we risk two processes concurrently reading and writing the data. This hazard is called write tearing. 
 
-The solution should perform atomic operations. Since there will be multiple clients, and there is no way for a client to ensure that no other client is currently accessing the same memory, we could easily risk reading inconsistent data, which is useless as far as storage goes. 
+Our solution assumes that operations on each of the machines are performed
+atomically to avoid cases where multiple clients' READ and WRITE results in
+inconsistent states. In other words, we require isolation.
 
-To ensure atomicity, the before-or-after property, we will enforce a sequential access to the memory. The machines will only handle one request at a time, such that all requests will be handled either before or after any other request. 
+%To ensure atomicity, the before-or-after property, we will enforce a sequential access to the memory. The machines will only handle one request at a time, such that all requests will be handled either before or after any other request
 
 
 %4)
-    The name mapping strategy described does not allow for dynamic joins and leaves of machines without making memory locations unavailable. We assume that there is always only one machine referenced by any address. This still allows for swapping machines, by reassigning the communication link to a machine with cloned data, but ensuring the persistence, for any writes already in the pipeline, would be difficult.
+The name mapping strategy described does not allow for dynamic joins and leaves
+of machines without making memory locations unavailable (gaps in the single address
+space). Recall that the relationship between address in the single address space
+and the machines is bijective.
+However, we can still support hot
+swapping machines, by reassigning the communication link to a machine with cloned
+data (catering to redundancy requirements). However, this jeopardizes requests who
+are already in the pipeline.\\
 
-    To make dynamic joins and leaves possible, we could employ an abstraction layer for every communication link. This layer would have to manage several redundant machines. All writes would be broadcast to all machines, and reads would be sent to any machine. Also, the layer would have to handle copying data to joining machines, to ensure true redundancy. 
+To make dynamic joins and leaves possible, we could employ an abstraction layer for every communication link. This layer would have to manage several redundant machines. All writes would be broadcast to all machines, and reads would be sent to any machine. Also, the layer would have to handle copying data to joining machines, to ensure true redundancy. 
 
-    This way, any machine can leave, as long as there are redundant machines available.
+This way, any machine can leave, as long as there are redundant machines available.
+
 \section*{Question 2: Techniques for Performance}
 
 \subsection*{Latency}
@@ -216,7 +248,7 @@ make them available for client applications.\\
 
 All testing is done client side against a bookstore server. Since we do not reset the state of the server for each test there are some things that we cannot test against an empty bookstore. Thus failures that arise from performing methods on an empty bookstore cannot be detected by our jUnit tests.
 
-For \texttt{rateBooks} we test that a rating can be added to a book and then reflected in a subsequent call to \texttt{storeManager.getBooks()}. We also test that adding multiple ratings to a single book will result in a correct average rating. Note that we actually due to this test found an error in source code of BookStoreBook and ImmutableStockBook for function getAverageRating resulting in an incorrect return value. The erroneously behavior was caused by an integer division that should have been a floating point division. The corrected line now reads:
+For \texttt{rateBooks} we test that a rating can be added to a book and then reflected in a subsequent call to \texttt{storeManager.getBooks()}. We also test that adding multiple ratings to a single book will result in a correct average rating. Note that we actually due to this test found an error in source code of BookStoreBook and ImmutableStockBook for function getAverageRating resulting in an incorrect return value. The erroneous behavior was caused by an integer division that should have been a floating point division. The corrected line now reads:
 
 \begin{center}
 \texttt{return (float) (timesRated == 0 ? -1.0 : (float)totalRating / (float)timesRated);}
@@ -224,7 +256,7 @@ For \texttt{rateBooks} we test that a rating can be added to a book and then ref
 
 Finally \texttt{testRateBook} also tests that appropriate exceptions are thrown when either the ISBN for a rated book is unknown or a rating is out of range. When an exception is thrown is also tested that all or nothing semantics apply.  
 
-For \texttt{getTopRatedBooks(N)} we test that it always the N books with the highest rating that is returned. Specifically we test that adding a book with lower rating and the same rating as the highest rating does not change the top rated book. We also test that getting multiple highest rated books returns the expected books. We then test that asking for more highest rated books than are present in the bookstore, simply returns a list of all books. Finally we test that a negative argument N throws an exception.
+For \texttt{getTopRatedBooks(N)} we test that it always the $n$ books with the highest rating that is returned. Specifically we test that adding a book with lower rating and the same rating as the highest rating does not change the top rated book. We also test that getting multiple highest rated books returns the expected books. We then test that asking for more highest rated books than are present in the bookstore, simply returns a list of all books. Finally we test that a negative argument $n$ throws an exception.
 
 Testing \texttt{getBooksInDemand} is straightforward. We add two new books and put them in demand by buying them twice. We then check that both books are returned by getBooksInDemand.
 
@@ -234,7 +266,7 @@ Testing \texttt{getBooksInDemand} is straightforward. We add two new books and p
 The architecture used in this assignment is strongly modular in the sense that
 we can easily add or remove proxies irrespective of what is happening
 server-side. The only thing constraining us is the specifications of the HTTP
-server (i.e. how much many proxies can it serve at a time, even with
+server (i.e. how many proxies can it serve at a time, even with
 concurrency). Note that the same does not apply for our back-end, as we would
 then have to synchronize updates to the book store across (what normally
 tends to be) a network communication link.\\
@@ -252,7 +284,7 @@ enable separation of concerns.\\
 %2
 Regarding a naming service, the architecure does not implement one as it is.
 However, we specify a hostname/IP-address and port when the proxies connect
-connect to a server. It is therefore convenient to use the domain-name system
+to a server. It is therefore convenient to use the domain-name system
 (DNS) as a naming service to identify book store servers.. If an authoritative
 name server could be set up, then we could extend the proxies to take a
 hostname and port as argument, enabling us to connect on a given book store
@@ -260,21 +292,24 @@ server.\\
 
 %3
 
-The StockManager and BookStore clients both utilize \texttt{SendAndRecv} for communication as it is defined in the Bookstore’s utility class. This method is implemented using At-most-once semantics since each message is only ever send once at the application layer. If the client to server transfer failed then no effect will take place server side. However is it possible that the server receives and processes the message but fails to notify the client. Both of these cases can happen due to timeout, errors or broken connection. Thus the client can only ever know for sure that a message has been processed At-most-once.\\
+The StockManager and BookStore clients both use \texttt{SendAndRecv} for communication as defined in the Bookstore’s utility class. This method is implemented using \emph{at-most-once} semantics since each message is only ever send once at the application layer. If the client to server transfer failed then no effect will take place server side. However is it possible that the server receives and processes the message but fails to notify the client. Both of these cases can happen due to timeout, errors or broken connection. Thus the client can only ever know for sure that a message has been processed at most once. It it
+clear why this semantics is preferable for our application; we do not want to risk buying
+a book twice by accident.
+
 
 %4
 
-Since all methods call to the CertainBookStore backend are synchronized the number of communication sources will not impact the consistency of the database. Thus proxy servers can safely be added. To increase the number of concurrent users the proxies should be placed between BookStoreHTTPServer and the HTTP-client types (BookStoreHTTPProxy and StockManagerHTTPProxy) as this will allow for client connections.\\
+Since all methods call to the CertainBookStore backend are synchronized the number of communication sources will not impact the consistency of the database. Thus proxy servers can safely be added. To increase the number of concurrent users the proxies should be placed between BookStoreHTTPServer and the HTTP-client types (BookStoreHTTPProxy and StockManagerHTTPProxy) as this will allow for multiple client connections.\\
 
 %5
 
-Yes, there are scalability bottlenecks in the architecture. While proxies might increase the number of connections, there is still only one server with one data storage. Requests will pass by the server, and the capacity of the server is therefore a bottleneck in this architecture.\\
+There are indeed scalability bottlenecks in the architecture. While proxies might increase the number of connections, there is still only one server with one data storage. Requests will pass by the server, and the capacity of the server is therefore a bottleneck in this architecture.\\
 
 %6
 
 In case that the server crashes, the clients would experience failures differently if web proxies were used, since they do still get a TCP connection, which they might not get if they were not connecting through a proxy.\\
 
-If a caching proxy was used, it is possible that the crash is masked for the client as long as the cache is still fresh. This only happens for cacheable requests, which are deterministic requests that does not change the state of the server.\\
+If a caching proxy was used, it is possible that the crash is masked for the client as long as the cache is still fresh. This only happens for cacheable requests, which are deterministic requests that does not change the state of the server (e.g. \texttt{getTopRatedBooks}.\\
 
 The use of web caching should not affect the semantics offered by the bookstore. Caching is supposed to be an optimization, and should therefore not change any semantics and behaviour. The client would, however, be able to use the ‘Cache-Control’ header in the HTTP protocol to bypass the cache.\\
 
