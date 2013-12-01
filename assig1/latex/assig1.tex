@@ -93,17 +93,27 @@ The API and pseudocode for READ and WRITE follows. They both have to calculate t
                  %\text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
 %\end{program}
 
+%\begin{program}
+%\mbox{Pseudocode for the lookup procedure}
+       %\PROC |lookup|(address) \BODY
+                 %\text{case}
+                 %machineIndex := adress \; \text{div} \; \text{MEMSIZE};
+                 %memoryOffset := adress \; \text{\%} \; \text{MEMSIZE};
+                 %\text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
+%\end{program}
+
 \begin{program}
 \mbox{Pseudocode for the TRANSLATE procedure}
        \PROC |TRANSLATE|(address) \BODY
-                 machineIndex := lookupMachine ( adress );
-                 memoryOffset := adress \; \text{\%} \; \text{MEMSIZE};
+                 (machineIndex, offSet) := lookupMachine ( adress );
+                 machineOffset := adress \; \text{-} \; \text{offSet};
                  %\text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
                  %memoryOffset := lookupOffset ( adress );
-                 \text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
+                 \text{return} \; \{ machineIndex, machineOffset\} \ENDPROC
 \end{program}
 
-This procedure is essentially the address mapping scheme described in part 1. It is called with an address and always returns an index of which machine is referenced, and the location of the data on the referenced machine.
+This procedure is essentially the address mapping scheme described in part 1. It is called with an address and always returns an index of which machine is referenced, and the location of the data on the referenced machine. It uses \emph{lookup} that determines which machine corresponds to an address (this is simple as each machine is determined by an address interval) to return
+the machine index (used to determine which communication link to use) and an offset (whatever we need to subtract from the single address space address to obtain the machine's local address).
 
 \begin{program}
 \mbox{Pseudocode for the READ procedure}
