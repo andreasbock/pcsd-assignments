@@ -77,17 +77,19 @@ public class BookStoreHTTPServerUtility {
 	}
 
 	
-	public static Thread startServerThread(int port, AbstractHandler handler){
+	public static Thread startServerThread(final int port, final AbstractHandler handler){
 		Thread thread = new Thread(new Runnable() {
-			private int port;
-			private AbstractHandler handler;
-		
+
 		    public void run() {
+		    	System.out.println(((Integer)port).toString());
 		    	createServer(port, handler);
 		    }
+			
+			
 		});
 		thread.start();
 		return thread;
 	}
+	
 }
 

@@ -35,10 +35,12 @@ public class BookStoreTest {
 	private static StockManager storeManager;
 	private static BookStore client;
 	private static BookStoreHTTPMessageHandler handler;
+	
+	private static Thread ServerThread = null;
 
 	public static void startTestServer () {
 		handler = new BookStoreHTTPMessageHandler();
-		BookStoreHTTPServerUtility.startServerThread(80, handler);
+		ServerThread = BookStoreHTTPServerUtility.startServerThread(8081, handler);
 	}
 	
 	public static void stopTestServer () {
@@ -48,6 +50,8 @@ public class BookStoreTest {
 			// Do nothing
 			e.printStackTrace();
 		}
+		
+		ServerThread.stop();
 	}
 	@BeforeClass
 	public static void setUpBeforeClass() {
