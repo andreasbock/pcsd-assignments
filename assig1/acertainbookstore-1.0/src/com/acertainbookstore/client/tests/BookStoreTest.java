@@ -468,7 +468,6 @@ public class BookStoreTest {
 			e.printStackTrace();
 			fail();
 		}
-		System.out.println(books.get(0));
 		assertEquals(book0, books.get(0));
 		
 		// Add new book with same rating

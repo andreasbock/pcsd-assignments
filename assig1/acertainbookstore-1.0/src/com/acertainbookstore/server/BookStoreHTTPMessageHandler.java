@@ -184,14 +184,12 @@ public class BookStoreHTTPMessageHandler extends AbstractHandler {
 				break;
 			
 			case RATEBOOKS:
-				System.out.println("Ratebooks");
 				xml = BookStoreUtility.extractPOSTDataFromRequest(request);
 				Set<BookRating> bookRating = (Set<BookRating>) BookStoreUtility
 						.deserializeXMLStringToObject(xml);
 				
 				bookStoreresponse = new BookStoreResponse();
 				try {
-					System.out.println(bookRating.toString());
 					CertainBookStore.getInstance().rateBooks(bookRating);
 				} catch (BookStoreException ex) {
 					bookStoreresponse.setException(ex);
