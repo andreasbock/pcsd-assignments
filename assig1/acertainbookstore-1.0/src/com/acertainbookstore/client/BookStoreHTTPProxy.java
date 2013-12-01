@@ -139,6 +139,8 @@ public class BookStoreHTTPProxy implements BookStore {
 		exchange.setURL(urlString);
 		Buffer requestContent = new ByteArrayBuffer(setBookRatingxmlString);
 		exchange.setRequestContent(requestContent);
+		
+		BookStoreUtility.SendAndRecv(this.client, exchange);
 	}
 
 	@SuppressWarnings("unchecked")

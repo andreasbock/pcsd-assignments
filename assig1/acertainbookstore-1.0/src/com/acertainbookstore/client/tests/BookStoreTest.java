@@ -35,7 +35,6 @@ public class BookStoreTest {
 	private static StockManager storeManager;
 	private static BookStore client;
 	private static BookStoreHTTPMessageHandler handler;
-	
 	private static Thread ServerThread = null;
 
 	public static void startTestServer () {
@@ -53,16 +52,17 @@ public class BookStoreTest {
 		
 		ServerThread.stop();
 	}
+	
+	
 	@BeforeClass
 	public static void setUpBeforeClass() {
-		
-		startTestServer();
 		
 		try {
 			if (localTest) {
 				storeManager = CertainBookStore.getInstance();
 				client = CertainBookStore.getInstance();
 			} else {
+				startTestServer();
 				storeManager = new StockManagerHTTPProxy(
 						"http://localhost:8081/stock");
 				client = new BookStoreHTTPProxy("http://localhost:8081");
@@ -468,6 +468,7 @@ public class BookStoreTest {
 			e.printStackTrace();
 			fail();
 		}
+		System.out.println(books.get(0));
 		assertEquals(book0, books.get(0));
 		
 		// Add new book with same rating
@@ -522,11 +523,10 @@ public class BookStoreTest {
 	public static void tearDownAfterClass() {
 		
 		if (!localTest) {
+			stopTestServer();
 			((BookStoreHTTPProxy) client).stop();
 			((StockManagerHTTPProxy) storeManager).stop();
 		}
-		
-		stopTestServer();
 	}
 
 }
