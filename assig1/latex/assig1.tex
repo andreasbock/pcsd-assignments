@@ -1,31 +1,36 @@
 \documentclass[11pt]{article}
 %---- defitions ----
-
-\def\Title{\textbf{PCSD}\\
-\vspace{0.5cm}
-Assignment 0 - Assignment 1}
 \def\Author{Andreas Bock\\
-Asbjørn Thegler}
-
+Asbj\o rn Thegler\\
+Lasse Dessau
+}
+\def\Title{\bf Principles of Computer Systems Design\\ {\Large Assignment 1}}
 % <Add more defitions here>
 %-------------------
 
 %---- packages ----
 \usepackage[]{amsmath}
-\usepackage{amssymb}
 \usepackage[english]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{moreverb}
-\usepackage{upgreek}
-\usepackage{natbib}
+\usepackage{hyperref}
 \usepackage{color}
 \usepackage{listings}
-\usepackage{hyperref}
-\usepackage[top=2in, bottom=0.5in, left=1.2in, right=1.2in]{geometry}
+\usepackage[T1]{fontenc} % font
+\usepackage{program}
+\usepackage[top=2in, bottom=0.5in, left=1.4in, right=1.4in]{geometry}
 %---- settings ----
+% Comments
+\newcommand{\comm}[2]{{\sf \(\spadesuit\){\bf #1: }{\rm \sf #2}\(\spadesuit\)}}
+\newcommand{\mcomm}[2]{\marginpar{\scriptsize \comm{#1}{#2}}}
+\newcommand{\ab}[1]{\mcomm{AB}{#1}} % Andreas Bock
+
 \topmargin=-0.9in % start text higher on page
 \textheight=695pt
+\setlength{\parindent}{0in}
+\definecolor{lightgray}{rgb}{0.9,0.9,0.9}
+\renewcommand*\rmdefault{ppl} % font
 %-------------------
 
 \begin{document}
@@ -36,18 +41,241 @@ Asbjørn Thegler}
 
 \section*{Question 1: Fundamental Abstractions}
 
-% 1
+The described solution is designed to be precisely elaborate enough to solve the
+criteria specified in the assignment. There are techniques that could increase
+both performance and fault tolerance by using redundancy, but this solution does
+not employ those techniques. We designed the solution to be as simple as possible,
+to make it more clear how we solve the described problems. 
 
-% 2
 
-% 3
+%1) 
+We assume that all machines contain an equal amount of memory. We can use this
+to avoid having to look up machines in a centralized table, since we can simply
+calculate what machine and memory unit is referenced using the address. It is,
+however, still necessary to look up the communication link in some table, which
+could resemble DNS, but this can be distributed to avoid centralized components.. 
 
-% 4
+The calculation performs a division to find what machine is referenced, and
+a modulus with a constant size of memory, to find the memory offset on the
+referenced machine. The amount of machines we can reference depends on the
+length of the addresses we use. This scales very well, since the amount of
+referenceable machines will grow exponentially as we add length to the address.
 
+Since the possible input space of addresses is limited to numeric values, any
+values will reference a specific machine. If we get addresses that are shorter
+than expected, we will assume that it must be zero-padded. As such, the naming
+scheme will not fail. Where there actually is a machine corresponding to the
+address is not a concern of the address mapping.
+
+
+%2)
+
+The API and pseudocode for READ and WRITE follows. They both have to calculate the referenced machine and offset from the address, so they share a common function called TRANSLATE, which also follows.
+
+\begin{program}
+\mbox{Pseudocode for the TRANSLATE procedure}
+       \PROC |TRANSLATE|(address) \BODY
+                 machineIndex := adress \; \text{div} \; \text{MEMSIZE};
+                 memoryOffset := adress \; \text{\%} \; \text{MEMSIZE};
+                 \text{return} \; \{ machineIndex, memoryOffset\} \ENDPROC
+\end{program}
+
+This procedure is essentially the address mapping scheme described in part 1. It is called with an address and always returns an index of which machine is referenced, and the location of the data on the referenced machine.
+
+\begin{program}
+\mbox{Pseudocode for the READ procedure}
+        \PROC |READ|(address) \BODY
+               \{machineIndex, memoryOffset\} := \text{TRANSLATE} (address);
+               \text{SEND} (machineIndex, \{memoryOffset\});
+               \text{try} \; \text{RECIEVE} (machineIndex, \{data\});
+               \text{timeout return} \; TIMEOUT;
+               \text{return} \; data \ENDPROC
+%\END
+\end{program}
+
+This procedure will take an address and can return either one memory unit, or an error in case of a timeout from communicating with the referenced machine.
+    
+\begin{program}
+\mbox{Pseudocode for the WRITE procedure}
+        \PROC |WRITE|(address) \BODY
+               \{machineIndex, memoryOffset\} := \text{TRANSLATE} (address);
+               \text{SEND} (machineIndex, \{memoryOffset, data\});
+               \text{try} \; \text{RECIEVE} (machineIndex, \{result\});
+               \text{timeout return}\; TIMEOUT;
+               \text{return} \; result \ENDPROC
+\end{program}
+
+
+This procedure will take an address and one memory unit and can return either a
+result from the machine, or an error in case of a timeout from communicating
+with the referenced machine.
+
+
+%3)
+We assume that by ‘regular main memory’, the assignment refers to RAM. READ/WRITE operations against RAM is atomic, if we choose to only write one block of data at a time. If we write several blocks of data, with no regard for synchronicity, we risk two processes concurrently reading and writing the data. This hazard is called write tearing. 
+
+The solution should perform atomic operations. Since there will be multiple clients, and there is no way for a client to ensure that no other client is currently accessing the same memory, we could easily risk reading inconsistent data, which is useless as far as storage goes. 
+
+To ensure atomicity, the before-or-after property, we will enforce a sequential access to the memory. The machines will only handle one request at a time, such that all requests will be handled either before or after any other request. 
+
+
+%4)
+    The name mapping strategy described does not allow for dynamic joins and leaves of machines without making memory locations unavailable. We assume that there is always only one machine referenced by any address. This still allows for swapping machines, by reassigning the communication link to a machine with cloned data, but ensuring the persistence, for any writes already in the pipeline, would be difficult.
+
+    To make dynamic joins and leaves possible, we could employ an abstraction layer for every communication link. This layer would have to manage several redundant machines. All writes would be broadcast to all machines, and reads would be sent to any machine. Also, the layer would have to handle copying data to joining machines, to ensure true redundancy. 
+
+    This way, any machine can leave, as long as there are redundant machines available.
 \section*{Question 2: Techniques for Performance}
+
+\subsection*{Latency}
+
+A request may exhibit latency, a delay that is a consequence of waiting for
+a given resource, which is not caused by the processor. This is typically
+waiting for a response from a memory or communication abstraction.
+
+Concurrency is a method of increasing the throughput of a system by exploiting
+these inherent delays and interleaving multiple requests to keep the processor
+busy at all times.
+
+Interleaving these processes requires management of the threads (requests),
+which we call overhead. When the time spent on managing concurrency is less
+than the latency we would otherwise observe, then we can increase throughput
+by increasing the amount of interleaving requests - or concurrency. The inverse
+is also true; when the cost of managing concurrency exceeds the latency then
+we will not increase concurrency. We conclude that there is indeed a trade-off;
+the amount of concurrency can always be increased if and only if the cost (time)
+is less than or equal to the latency.
+
+\subsection*{Batching and Dallying}
+
+Batching is a method of collecting and processing tasks in groups such that
+the overhead of each task is done only once.
+An example of this could be when our tasks involve setting up a TCP connection
+with another server, sending a requestin, waiting for a response, and closing
+it again. If we can can use \emph{one} TCP connection for sending the all the
+requests then we have batched the tasks.
+
+On the other hand, dallying is a way of delaying an operation in the hopes that
+as time passes, the need for executing this operation will vanish. This
+could allow for more batching which as we saw above will decrease overhead. 
+
+A good example of dallying can be found in your text editor. Per default, most
+editors will not constantly save your current changes until you explicitly
+tell it to. Instead, your changes will be saved in a buffer that will then be
+written to disk as a batch job if you save, or flush it if you decide that your
+changes were (for whatever reason) not to be written after all.
+
+Our example assumes that the decision-making part of dallying is not necessarily
+made by our system, it could be the user or application.
+
+\subsection*{Fast path optimization}
+
+Caching is indeed a fast path optimization, as it will require less cycles to
+read a value stored in a L1 cache of a processor than fetching it from memory.
+As we saw in the lecture, the latter is orders of magnitude slower.
+
+In addition, write operations are also affected by caching in the sense that
+we are now able to write to a page in the cache instead of having to go to the
+disk.
+We keep in mind that there is some overhead in checking for dirty pages, but
+this is nothing compared to \emph{not} having a cache.
+
 
 \section*{Programming Task}
 
+\subsection*{Implementation}
+We have added the missing functionality, namely \texttt{rateBooks},
+\texttt{getTopRatedBooks} and \texttt{getBooksInDemand}, and we will now briefly go through each of them to document our implementation.
+The three methods were implemented in the \texttt{CertainBookStore} class, as
+well as in the respective \texttt{HTTPProxy}.
+
+\texttt{rateBooks} implement all-or-nothing semantics. This means that we will
+either rate all of the books given as argument, or none of them if we encounter
+an error.
+For \texttt{getTopRatedBooks}, we have used a local class,
+\texttt{StockBookCompareRating} that implements \texttt{Comparator<StockBook>}
+to be able to sort the books in the store according to their rating. Note that
+we \emph{only} compare ratings, meaning that books with the same rating will be
+not always appear in the same order in the sorted list.
+Moreover, we have decided not to fail when clients request the $k^{\text{th}}$
+top rated books of a book store with $n$ books and $k>n$. We use the following
+line of code to simply return all the books in this case:
+
+\begin{center}
+\texttt{numBooks = Math.min(numBooks, bookMap.values().size());}
+\end{center}
+
+These methods are also implemented in the \texttt{BookStoreHTTPProxy} class to
+make them available for client applications.\\
+
+\texttt{getBooksInDemand} is very straight forward and simply returns a
+(possibly empty) list of books where the amount of sale misses is larger than
+0. This method is implemented in the \texttt{StockManagerHTTPProxy} class.
+
+\subsection*{Testing}
+
+All testing is done client side against a bookstore server. Since we do not reset the state of the server for each test there are some things that we cannot test against an empty bookstore. Thus failures that arise from performing methods on an empty bookstore cannot be detected by our jUnit tests.
+
+For \texttt{rateBooks} we test that a rating can be added to a book and then reflected in a subsequent call to \texttt{storeManager.getBooks()}. We also test that adding multiple ratings to a single book will result in a correct average rating. Note that we actually due to this test found an error in source code of BookStoreBook and ImmutableStockBook for function getAverageRating resulting in an incorrect return value. The erroneously behavior was caused by an integer division that should have been a floating point division. The corrected line now reads:
+
+\begin{center}
+\texttt{return (float) (timesRated == 0 ? -1.0 : (float)totalRating / (float)timesRated);}
+\end{center}
+
+Finally \texttt{testRateBook} also tests that appropriate exceptions are thrown when either the ISBN for a rated book is unknown or a rating is out of range. When an exception is thrown is also tested that all or nothing semantics apply.  
+
+For \texttt{getTopRatedBooks(N)} we test that it always the N books with the highest rating that is returned. Specifically we test that adding a book with lower rating and the same rating as the highest rating does not change the top rated book. We also test that getting multiple highest rated books returns the expected books. We then test that asking for more highest rated books than are present in the bookstore, simply returns a list of all books. Finally we test that a negative argument N throws an exception.
+
+Testing \texttt{getBooksInDemand} is straightforward. We add two new books and put them in demand by buying them twice. We then check that both books are returned by getBooksInDemand.
+
 \section*{Discussion on architecture}
+
+%1
+The architecture used in this assignment is strongly modular in the sense that
+we can easily add or remove proxies irrespective of what is happening
+server-side. The only thing constraining us is the specifications of the HTTP
+server (i.e. how much many proxies can it serve at a time, even with
+concurrency). Note that the same does not apply for our back-end, as we would
+then have to synchronize updates to the book store across (what normally
+tends to be) a network communication link.\\
+
+Furthermore, the architecture also provides protection between the two types of
+clients to prevent managers from accidentally buying books, and so clients are
+unable to see which books are not in stock.\\
+
+This is due to the fact that the client or stock manager applications only 
+implement a subset of the API provided by the \texttt{CertainBookStore}.
+Finally, whether or not the requests are sent over a network communication link
+is completely transparent to the end-users (clients and managers), such as to
+enable separation of concerns.\\
+
+%2
+Regarding a naming service, the architecure does not implement one as it is.
+However, we specify a hostname/IP-address and port when the proxies connect
+connect to a server. It is therefore convenient to use the domain-name system
+(DNS) as a naming service to identify book store servers.. If an authoritative
+name server could be set up, then we could extend the proxies to take a
+hostname and port as argument, enabling us to connect on a given book store
+server.\\
+
+%3
+
+The StockManager and BookStore clients both utilize \texttt{SendAndRecv} for communication as it is defined in the Bookstore’s utility class. This method is implemented using At-most-once semantics since each message is only ever send once at the application layer. If the client to server transfer failed then no effect will take place server side. However is it possible that the server receives and processes the message but fails to notify the client. Both of these cases can happen due to timeout, errors or broken connection. Thus the client can only ever know for sure that a message has been processed At-most-once.\\
+
+%4
+
+Since all methods call to the CertainBookStore backend are synchronized the number of communication sources will not impact the consistency of the database. Thus proxy servers can safely be added. To increase the number of concurrent users the proxies should be placed between BookStoreHTTPServer and the HTTP-client types (BookStoreHTTPProxy and StockManagerHTTPProxy) as this will allow for client connections.\\
+
+%5
+
+Yes, there are scalability bottlenecks in the architecture. While proxies might increase the number of connections, there is still only one server with one data storage. Requests will pass by the server, and the capacity of the server is therefore a bottleneck in this architecture.\\
+
+%6
+
+In case that the server crashes, the clients would experience failures differently if web proxies were used, since they do still get a TCP connection, which they might not get if they were not connecting through a proxy.\\
+
+If a caching proxy was used, it is possible that the crash is masked for the client as long as the cache is still fresh. This only happens for cacheable requests, which are deterministic requests that does not change the state of the server.\\
+
+The use of web caching should not affect the semantics offered by the bookstore. Caching is supposed to be an optimization, and should therefore not change any semantics and behaviour. The client would, however, be able to use the ‘Cache-Control’ header in the HTTP protocol to bypass the cache.\\
 
 \end{document}
