@@ -7,8 +7,10 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.nio.SelectChannelConnector;
 
 /**
  * Utility methods to create Jetty server instances
@@ -24,8 +26,14 @@ public class BookStoreHTTPServerUtility {
 		if (handler != null) {
 			server.setHandler(handler);
 		}
+		
+		SelectChannelConnector connector0 = new SelectChannelConnector();
+        connector0.setPort(port);
+        connector0.setReuseAddress(true);
 
 		try {
+			 server.setConnectors(new Connector[]
+		                { connector0 });
 			server.start();
 			server.join();
 		} catch (Exception ex) {
@@ -68,4 +76,18 @@ public class BookStoreHTTPServerUtility {
 		return true;
 	}
 
+	
+	public static Thread startServerThread(int port, AbstractHandler handler){
+		Thread thread = new Thread(new Runnable() {
+			private int port;
+			private AbstractHandler handler;
+		
+		    public void run() {
+		    	createServer(port, handler);
+		    }
+		});
+		thread.start();
+		return thread;
+	}
 }
+

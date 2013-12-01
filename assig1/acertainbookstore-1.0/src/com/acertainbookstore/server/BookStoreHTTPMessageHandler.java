@@ -209,9 +209,8 @@ public class BookStoreHTTPMessageHandler extends AbstractHandler {
 				try {
 					numBooks = BookStoreUtility
 							.convertStringToInt(numBooksString);
-					bookStoreresponse.setList(CertainBookStore.getInstance()
-							.getEditorPicks(numBooks));
-					CertainBookStore.getInstance().getTopRatedBooks(numBooks);
+					bookStoreresponse.setList(CertainBookStore.
+							getInstance().getTopRatedBooks(numBooks));
 				} catch (BookStoreException ex) {
 					bookStoreresponse.setException(ex);
 				}

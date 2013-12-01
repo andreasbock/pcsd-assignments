@@ -2,6 +2,7 @@ package com.acertainbookstore.client.tests;
 
 import static org.junit.Assert.*;
 
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +23,7 @@ import com.acertainbookstore.interfaces.BookStore;
 import com.acertainbookstore.interfaces.StockManager;
 import com.acertainbookstore.server.BookStoreHTTPMessageHandler;
 import com.acertainbookstore.utils.BookStoreException;
+import com.acertainbookstore.server.BookStoreHTTPServerUtility;;
 
 /**
  * Test class to test the BookStore interface
@@ -29,18 +31,19 @@ import com.acertainbookstore.utils.BookStoreException;
  */
 public class BookStoreTest {
 
-	private static boolean localTest = true; 
+	private static boolean localTest = false; 
 	private static StockManager storeManager;
 	private static BookStore client;
 	private static BookStoreHTTPMessageHandler handler;
 
 	public static void startTestServer () {
 		handler = new BookStoreHTTPMessageHandler();
+		BookStoreHTTPServerUtility.startServerThread(80, handler);
 	}
 	
 	public static void stopTestServer () {
 		try {
-			handler.stop();
+		//	handler.stop();
 		} catch (Exception e) {
 			// Do nothing
 			e.printStackTrace();
