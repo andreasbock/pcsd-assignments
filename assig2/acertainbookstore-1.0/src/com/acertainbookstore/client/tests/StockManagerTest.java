@@ -42,6 +42,7 @@ public class StockManagerTest {
 		ServerThread = BookStoreHTTPServerUtility.startServerThread(8081, handler);
 	}
 	
+	@SuppressWarnings("deprecation")
 	public static void stopTestServer () {
 		try {
 		//	handler.stop();

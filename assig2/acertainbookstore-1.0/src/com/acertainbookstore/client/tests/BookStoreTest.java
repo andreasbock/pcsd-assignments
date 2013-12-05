@@ -2,7 +2,6 @@ package com.acertainbookstore.client.tests;
 
 import static org.junit.Assert.*;
 
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -42,6 +41,7 @@ public class BookStoreTest {
 		ServerThread = BookStoreHTTPServerUtility.startServerThread(8081, handler);
 	}
 	
+	@SuppressWarnings("deprecation")
 	public static void stopTestServer () {
 		try {
 		//	handler.stop();
