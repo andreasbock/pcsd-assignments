@@ -1,0 +1,54 @@
+\documentclass[11pt]{article}
+%---- defitions ----
+\def\Author{Andreas Bock\\
+Asbj\o rn Thegler\\
+Lasse Dessau
+}
+\def\Title{\bf Principles of Computer Systems Design\\ {\Large Assignment 1}}
+% <Add more defitions here>
+%-------------------
+
+%---- packages ----
+\usepackage[]{amsmath}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{moreverb}
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{listings}
+\usepackage[T1]{fontenc} % font
+\usepackage{program}
+\usepackage[top=2in, bottom=0.5in, left=1.4in, right=1.4in]{geometry}
+%---- settings ----
+% Comments
+\newcommand{\comm}[2]{{\sf \(\spadesuit\){\bf #1: }{\rm \sf #2}\(\spadesuit\)}}
+\newcommand{\mcomm}[2]{\marginpar{\scriptsize \comm{#1}{#2}}}
+\newcommand{\ab}[1]{\mcomm{AB}{#1}} % Andreas Bock
+
+\topmargin=-0.9in % start text higher on page
+\textheight=695pt
+\setlength{\parindent}{0in}
+\definecolor{lightgray}{rgb}{0.9,0.9,0.9}
+\renewcommand*\rmdefault{ppl} % font
+%-------------------
+
+\begin{document}
+\title{\Title}
+\author{\Author}
+\date{\today}
+\maketitle
+
+\section*{Question 1: Serializability \& Locking}
+
+\section*{Question 2: Optimistic Concurrency Control}
+
+\section*{Programming Task}
+
+\subsection*{Implementation}
+
+\subsection*{Testing}
+
+\subsection*{Discussion}
+
+\end{document}
