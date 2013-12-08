@@ -153,11 +153,10 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 		// Check that all ISBNs that we buy are there first.
 		int ISBN;
 		BookStoreBook book;
-		Boolean saleMiss = false;
 		write.lock();
 		for (BookCopy bookCopyToBuy : bookCopiesToBuy) {
 			ISBN = bookCopyToBuy.getISBN();
-			if (BookStoreUtility.isInvalidISBN(ISBN)) 
+			if (BookStoreUtility.isInvalidISBN(ISBN))
 				throw new BookStoreException(BookStoreConstants.ISBN + ISBN
 						+ BookStoreConstants.INVALID);
 			if (!bookMap.containsKey(ISBN))
@@ -167,17 +166,9 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 			if (!book.areCopiesInStore(bookCopyToBuy.getNumCopies())) {
 				book.addSaleMiss(); // If we cannot sell the copies of the book
 									// its a miss 
-				saleMiss = true;
 			}
 		}
-
-		// We throw exception now since we want to see how many books in the
-		// order incurred misses which is used by books in demand
-		/* if (saleMiss) {
-			throw new BookStoreException(BookStoreConstants.BOOK
-					+ BookStoreConstants.NOT_AVAILABLE);
-		} */
-		
+	
 		// Then make purchase
 		for (BookCopy bookCopyToBuy : bookCopiesToBuy) {
 			book = bookMap.get(bookCopyToBuy.getISBN());
@@ -263,7 +254,6 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 
 	@Override
 	public List<Book> getTopRatedBooks(int numBooks) throws BookStoreException {
-		// TODO Auto-generated method stub
 		throw new BookStoreException();
 	}
 
