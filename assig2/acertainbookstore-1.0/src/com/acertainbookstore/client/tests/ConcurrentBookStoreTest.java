@@ -205,7 +205,7 @@ public class ConcurrentBookStoreTest {
 	}
 	
 	/**
-	 * Our own concurrency test.
+	 * Our own concurrency test for ratings.
 	 */
 	@Test
 	public void testConcurrentRating () {
@@ -274,6 +274,75 @@ public class ConcurrentBookStoreTest {
 				assertTrue(book.getAverageRating() == expectedAvgRatingISBN2);
 			}
 		}
+	}
+	/**
+	 * Our own concurrency test for getBooksInDemand.
+	 */
+	@Test
+	public void testConcurrentInDemand () {
+		Set<StockBook> bookSet = new HashSet<StockBook>();
+
+		Integer testISBN1 = 20;
+		Integer testISBN2 = 21;
+		
+		// Books to test on
+		bookSet.add(new ImmutableStockBook(testISBN1,
+				"A Tale of Things and Stuff",
+				"Stephen Ming", (float) 99, 1, 0, 0, 0, false));
+		bookSet.add(new ImmutableStockBook(testISBN2,
+				"Facts the Truth of Factoids",
+				"<3 Justin Bieber <3", (float) 98, 1, 0, 0, 0, false));	
+		
+		// First we need to add the books to the database
+		try {
+			storeManager.addBooks(bookSet);
+		} catch (BookStoreException e1) {
+			e1.printStackTrace();
+			fail();
+		}
+
+		// Initial demand
+		BookCopy bookCopy1 = new BookCopy(testISBN1, 2);
+		BookCopy bookCopy2 = new BookCopy(testISBN2, 2);
+		Set<BookCopy> bookCopySet1 = new HashSet<BookCopy>();
+		Set<BookCopy> bookCopySet2 = new HashSet<BookCopy>();
+		
+		bookCopySet1.add(bookCopy1);
+		bookCopySet2.add(bookCopy1);
+		bookCopySet2.add(bookCopy2);
+
+		// Create clients
+		Thread buyer1 = new Thread (new ConcurrentBuyBooksTest(bookCopySet1));
+		Thread buyer2 = new Thread (new ConcurrentBuyBooksTest(bookCopySet2));
+		
+		// Run threads
+		buyer1.start();
+		buyer2.start();
+	
+		// Wait
+		try {
+			buyer1.join();
+			buyer2.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	
+		List<StockBook> books = null;
+		try {
+			books = storeManager.getBooksInDemand();
+		} catch (BookStoreException e) {
+			e.printStackTrace();
+			fail();
+		}
+		for (StockBook book : books) {
+			if (book.getISBN() == testISBN1) {
+				assertTrue(book.getSaleMisses() == 2);
+			}
+			if (book.getISBN() == testISBN2) {
+				assertTrue(book.getSaleMisses() == 1);
+			}
+		}
+
 	}
 	
 	@AfterClass
