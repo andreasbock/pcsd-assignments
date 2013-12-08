@@ -45,7 +45,7 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 			throw new BookStoreException(BookStoreConstants.NULL_INPUT);
 		}
 		// Check if all are there
-		read.lock();
+		write.lock();
 		for (StockBook book : bookSet) {
 			int ISBN = book.getISBN();
 			String bookTitle = book.getTitle();
@@ -64,12 +64,11 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 						+ BookStoreConstants.DUPLICATED);
 			}
 		}
-		write.lock();
 		for (StockBook book : bookSet) {
 			int ISBN = book.getISBN();
 			bookMap.put(ISBN, new BookStoreBook(book));
 		}
-		unlockAll();
+		write.unlock();
 		return;
 	}
 
@@ -80,7 +79,7 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 		if (bookCopiesSet == null) {
 			throw new BookStoreException(BookStoreConstants.NULL_INPUT);
 		}
-		read.lock();
+		write.lock();
 		for (BookCopy bookCopy : bookCopiesSet) {
 			ISBN = bookCopy.getISBN();
 			numCopies = bookCopy.getNumCopies();
@@ -95,7 +94,6 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 						+ numCopies + BookStoreConstants.INVALID);
 		}
 
-		write.lock();
 		BookStoreBook book;
 		// Update the number of copies
 		for (BookCopy bookCopy : bookCopiesSet) {
@@ -104,10 +102,10 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 			book = bookMap.get(ISBN);
 			book.addCopies(numCopies);
 			}
-		unlockAll();
+		write.unlock();
 	}
 
-	public List<StockBook> getBooks() {
+	public List<StockBook> getBooks() throws BookStoreException {
 		List<StockBook> listBooks = new ArrayList<StockBook>();
 		Collection<BookStoreBook> bookMapValues;
 		
@@ -129,7 +127,7 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 
 		int ISBNVal;
 		
-		read.lock();
+		write.lock();
 		for (BookEditorPick editorPickArg : editorPicks) {
 			ISBNVal = editorPickArg.getISBN();
 			if (BookStoreUtility.isInvalidISBN(ISBNVal))
@@ -139,12 +137,11 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 				throw new BookStoreException(BookStoreConstants.ISBN + ISBNVal
 						+ BookStoreConstants.NOT_AVAILABLE);
 		}
-		write.lock();
 		for (BookEditorPick editorPickArg : editorPicks) {
 			bookMap.get(editorPickArg.getISBN()).setEditorPick(
 					editorPickArg.isEditorPick());
 		}
-		unlockAll();
+		write.unlock();
 		return;
 	}
 
@@ -157,7 +154,7 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 		int ISBN;
 		BookStoreBook book;
 		Boolean saleMiss = false;
-		read.lock();
+		write.lock();
 		for (BookCopy bookCopyToBuy : bookCopiesToBuy) {
 			ISBN = bookCopyToBuy.getISBN();
 			if (BookStoreUtility.isInvalidISBN(ISBN))
@@ -177,17 +174,15 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 		// We throw exception now since we want to see how many books in the
 		// order incurred misses which is used by books in demand
 		if (saleMiss) {
-			read.unlock();
 			throw new BookStoreException(BookStoreConstants.BOOK
 					+ BookStoreConstants.NOT_AVAILABLE);
 		}
-		write.lock();
 		// Then make purchase
 		for (BookCopy bookCopyToBuy : bookCopiesToBuy) {
 			book = bookMap.get(bookCopyToBuy.getISBN());
 			book.buyCopies(bookCopyToBuy.getNumCopies());
 		}
-		unlockAll();
+		write.unlock();
 		return;
 	}
 
@@ -273,19 +268,36 @@ public class ConcurrentCertainBookStore implements BookStore, StockManager {
 
 	@Override
 	public List<StockBook> getBooksInDemand() throws BookStoreException {
-		// TODO Auto-generated method stub
-		throw new BookStoreException();
+		List<StockBook> books = getBooks();
+		List<StockBook> inDemand = new ArrayList<StockBook>();
+		read.lock();
+		int isbn;
+		
+		for (StockBook book : books) {
+			if (book.getSaleMisses() > 0) {
+				isbn = book.getISBN();
+				inDemand.add(bookMap.get(isbn).immutableStockBook());
+			}
+		}	
+		read.unlock();
+		return inDemand;
 	}
 
 	@Override
 	public void rateBooks(Set<BookRating> bookRating) throws BookStoreException {
-		// TODO Auto-generated method stub
-		throw new BookStoreException();
-	}
-
-	public void unlockAll() {
-		read.unlock();
+		// All or nothing 
+		write.lock();
+		for (BookRating rating : bookRating) {
+			if (!(0 <= rating.getRating() && rating.getRating() <= 5)
+			     || !bookMap.containsKey(rating.getISBN())) {
+				throw new BookStoreException(BookStoreConstants.ISBN + rating.getISBN()
+						+ BookStoreConstants.NOT_AVAILABLE);
+			}
+		}
+		// Yay!
+		for (BookRating rating : bookRating) {
+			bookMap.get(rating.getISBN()).addRating(rating.getRating());
+		}
 		write.unlock();
 	}
-
 }
