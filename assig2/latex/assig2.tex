@@ -227,9 +227,9 @@ with two other tests for \texttt{getInDemand()} and \texttt{getAverageRating()}
 \footnote{Which we have also implemented in the new concurrent bookstore.}.
 
 To use JUnit in a threaded test, we have added two fields,
-\texttt{Exception exception} and \texttt{Error error}
-to our \texttt{ConcurrentBookStoreTest} class that are initialized
-to {\tt null} and server as containers for errors and exceptions thrown by any thread that
+\texttt{Exception exception} and \texttt{Error error} to our
+\texttt{ConcurrentBookStoreTest} class that are initialized
+to {\tt null} and serves as containers for errors and exceptions thrown by any thread that
 JUnit has started. These are therefore declared as \texttt{volatile} to indicate that the 
 value may never be cached thread-locally so that threads must write directly to
 memory instead.\\
@@ -240,7 +240,7 @@ The \texttt{tearDownAfterClass} will then report the error or exception if one
 of these are anything other than \texttt{null}.\\
 
 Finally the assignment text states: "\emph{the clients invoke a fixed number of operations,
-configured as a parameter...}". This is not clear to us what is meant by this, as
+configured as a parameter...}". It is not clear to us what is meant by this, as
 it seems excessive to create a new class where we translate the parameters (along with
 parameters such as \texttt{Set<StockBook>} for \texttt{addBooks}. Instead, we have
 designed static nested classes that implement \texttt{Runnable} to cater for the
@@ -250,12 +250,16 @@ Tests are performed locally.
 
 \subsubsection*{Test 1}
 
+In this test we want to check whether our \texttt{buyBooks} and \texttt{addCopies}
+methods are properly synchronized.\\
 This test has been implemented using two helper classes through the \texttt{Runnable}
 interface, and perform the necessary operations on the database. The main thread
-then reports if we the stock is consistent.
+then reports if the stock is consistent.
 
 \subsubsection*{Test 2}
 
+In this test we want to check whether our interface respects the \emph{before-or-after}
+property; namely if buying books and replenishing stock is done atomically.\\
 This tests uses the same logic as in test 1, with the exception that we have used
 the \texttt{volatile} "trick" described in the introduction.
 
@@ -293,7 +297,7 @@ strict we only release them at the end.
 
 However, had we used proper S2PL, phantoms would still not be a problem since
 we want users to see the newest state of the bookstore at all times.
-For the sake of argument one solution would to lock the table/database
+For the sake of argument one solution would be to lock the table/database
 until the reading transaction has finished. This is not feasible, as we would
 then allow users who browse the bookstore to prevent other users to buy.  
 
@@ -315,12 +319,12 @@ thrashing as described in the course compendium. This makes our
 solution less scalable than if we had a lock per entry.\\
 
 %4
-Finally, ssuming the cost of implementing such a protocol is reasonable, the
-overhead being paid by is minimal compared to the gains in concurrency.
+Finally, assuming the cost of implementing such a protocol is reasonable, the
+overhead being paid is minimal compared to the gains in concurrency.
 As we mentioned early, this can be seen from the nature of the application
 we are building, namely a bookstore. We will expect readers to be manifold
 compared to the number of writers (readers = browsing customer, writer = 
-buyer), and therefore we except the locking protocol to increase our 
+buyer), and therefore we expect the locking protocol to increase our 
 throughput while still providing isolation.
 
 \end{document}
