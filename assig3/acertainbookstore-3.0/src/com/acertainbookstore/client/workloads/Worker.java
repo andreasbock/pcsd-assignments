@@ -1,11 +1,13 @@
-/**
- * 
- */
 package com.acertainbookstore.client.workloads;
 
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
+import com.acertainbookstore.business.StockBook;
+import com.acertainbookstore.interfaces.BookStore;
+import com.acertainbookstore.interfaces.StockManager;
 import com.acertainbookstore.utils.BookStoreException;
 
 /**
@@ -99,7 +101,12 @@ public class Worker implements Callable<WorkerRunResult> {
 	 * @throws BookStoreException
 	 */
 	private void runRareStockManagerInteraction() throws BookStoreException {
-		// TODO: Add code for New Stock Acquisition Interaction
+		StockManager stockManager = configuration.getStockManager();
+		List<StockBook> stockBooks = stockManager.getBooks();
+		// Silly interface :(
+		Set<StockBook> genStockBooks = BookSetGenerator.nextSetOfStockBooks(BookSetGenerator.random());
+		// TODO: Add set difference using ISBNS
+		// TODO: Add missing books
 	}
 
 	/**
