@@ -46,6 +46,11 @@ public class CertainBookStore implements BookStore, StockManager {
 		return singleInstance;
 	}
 
+	public synchronized void reset() throws BookStoreException {
+		bookMap = new HashMap<Integer, BookStoreBook>();
+//		System.out.println("Reset database");
+	}
+	
 	public synchronized void addBooks(Set<StockBook> bookSet)
 			throws BookStoreException {
 

@@ -72,4 +72,12 @@ public class WorkerRunResult {
 		this.totalFrequentBookStoreInteractionRuns = totalFrequentBookStoreInteractionRuns;
 	}
 
+	public String toString() {
+		return successfulFrequentBookStoreInteractionRuns 
+				+ ", " + totalFrequentBookStoreInteractionRuns
+				+ ", " + successfulInteractions
+				+ ", " + totalRuns
+				+ ", " + elapsedTimeInNanoSecs;
+		
+	}
 }

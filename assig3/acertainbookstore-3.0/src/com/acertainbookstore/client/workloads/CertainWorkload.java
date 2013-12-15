@@ -30,43 +30,57 @@ public class CertainWorkload {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		int numConcurrentWorkloadThreads = 10;
-		String serverAddress = "http://localhost:8081";
-		boolean localTest = true;
-		List<WorkerRunResult> workerRunResults = new ArrayList<WorkerRunResult>();
-		List<Future<WorkerRunResult>> runResults = new ArrayList<Future<WorkerRunResult>>();
-
-		initializeBookStoreData(serverAddress, localTest);
-
-		ExecutorService exec = Executors
-				.newFixedThreadPool(numConcurrentWorkloadThreads);
-
-		for (int i = 0; i < numConcurrentWorkloadThreads; i++) {
-			// The server address is ignored if localTest is true
-			WorkloadConfiguration config = new WorkloadConfiguration(
-					serverAddress, localTest);
-			Worker workerTask = new Worker(config);
-			// Keep the futures to wait for the result from the thread
-			runResults.add(exec.submit(workerTask));
+		int numConcurrentWorkloadThreads = 20;
+		for (int threads = 1; threads <= numConcurrentWorkloadThreads; threads++) {
+			String serverAddress = "http://localhost:8081";
+			boolean localTest = false;
+			List<WorkerRunResult> workerRunResults = new ArrayList<WorkerRunResult>();
+			List<Future<WorkerRunResult>> runResults = new ArrayList<Future<WorkerRunResult>>();
+	
+			initializeBookStoreData(serverAddress, localTest);
+	
+			ExecutorService exec = Executors
+					.newFixedThreadPool(threads);
+	
+			for (int i = 0; i < threads; i++) {
+				// The server address is ignored if localTest is true
+				WorkloadConfiguration config = new WorkloadConfiguration(
+						serverAddress, localTest);
+				Worker workerTask = new Worker(config);
+				// Keep the futures to wait for the result from the thread
+				runResults.add(exec.submit(workerTask));
+			}
+	
+			// Get the results from the threads using the futures returned
+			for (Future<WorkerRunResult> futureRunResult : runResults) {
+				WorkerRunResult runResult = futureRunResult.get(); // blocking call
+				workerRunResults.add(runResult);
+			}
+	
+			exec.shutdownNow(); // shutdown the executor
+			reportMetric(workerRunResults, threads);
 		}
-
-		// Get the results from the threads using the futures returned
-		for (Future<WorkerRunResult> futureRunResult : runResults) {
-			WorkerRunResult runResult = futureRunResult.get(); // blocking call
-			workerRunResults.add(runResult);
-		}
-
-		exec.shutdownNow(); // shutdown the executor
-		reportMetric(workerRunResults);
 	}
 
 	/**
 	 * Computes the metrics and prints them
 	 * 
 	 * @param workerRunResults
+	 * @param numConcurrentWorkloadThreads 
 	 */
-	public static void reportMetric(List<WorkerRunResult> workerRunResults) {
-		// TODO: You should aggregate metrics and output them for plotting here
+	public static void reportMetric(List<WorkerRunResult> workerRunResults, int threads) {
+		float successfulCust = 0;
+		float totalCust = 0;
+		float time = 0;
+		for (WorkerRunResult result : workerRunResults) {
+			successfulCust += result.getSuccessfulFrequentBookStoreInteractionRuns();
+			totalCust += result.getTotalFrequentBookStoreInteractionRuns();
+			time += result.getElapsedTimeInNanoSecs();
+		}
+		float averageseconds = (time / workerRunResults.size()) / 1000000000;
+		float throughput  = successfulCust / averageseconds;
+		float latency = averageseconds / (successfulCust / workerRunResults.size());
+		System.out.println(threads + ", " + throughput + ", " + latency + ", " + successfulCust / totalCust);
 	}
 
 	/**
@@ -91,11 +105,11 @@ public class CertainWorkload {
 			bookStore = new BookStoreHTTPProxy(serverAddress);
 		}
 
-		// TODO: You should initialize data for your bookstore here
-		
-		int initialStock = 1000; // Prone to change depending on results
+		stockManager.reset();
+		int initialStock = 500; // Prone to change depending on results
 		Set<StockBook> stockBooks = BookSetGenerator.nextSetOfStockBooks(initialStock);
 		stockManager.addBooks(stockBooks);
+				
 		// Finished initialization, stop the clients if not localTest
 		if (!localTest) {
 			((BookStoreHTTPProxy) bookStore).stop();

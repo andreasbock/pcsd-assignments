@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import com.acertainbookstore.business.Book;
 import com.acertainbookstore.business.ImmutableStockBook;
 import com.acertainbookstore.business.StockBook;
 
@@ -25,19 +26,17 @@ public class BookSetGenerator {
 	 * @param num
 	 * @return
 	 */
-	public static Set<Integer> sampleFromSetOfISBNs(Set<Integer> isbns, int num) {
-		Set<Integer> randomISBNs = new HashSet<>();
-		List<Integer> isbnList = new ArrayList<>();
-		isbnList.addAll(isbns);
+	public static List<Book> sampleFromSetOfISBNs(List<Book> isbns, int num) {
+		List<Book> newList = new ArrayList<Book>();
 		
 		for (int i = 0; i < num; i++) {
-			int randomIndex = randomInt(num-i);
-			randomISBNs.add(isbnList.get(randomIndex));
+			int randomIndex = randomInt(isbns.size());
+			newList.add(isbns.get(randomIndex));
 			// Remove to avoid duplicates
-			isbnList.remove(randomIndex);
+			isbns.remove(randomIndex);
 		}
 			
-		return randomISBNs;
+		return newList;
 	}
 
 	/**
@@ -52,18 +51,19 @@ public class BookSetGenerator {
 		// Books are uniquely defined by their ISBN, so we don't care about the
 		// other properties being equal.
 		for (int i = 0; i < num; i++) {
-			stockBooks.add(new ImmutableStockBook(random(), "Some Title", "Some Author", (float) 10.0,
-												  5, (long) 1, (long) 1, (long) 1, false));
+			stockBooks.add(new ImmutableStockBook(random()+1, "Some Title", "Some Author", (float) 10.0,
+												  20, (long) 0, (long) 0, (long) 0, randomBool()));
 		}
 		return stockBooks;
 	}
 
+	
 	/**
 	 * Generates a random int.
 	 * @return int
 	 */
 	public static int random() {
-        return rGen.nextInt(100);
+        return rGen.nextInt(10000000);
 	}
 	
 	/**
@@ -73,5 +73,13 @@ public class BookSetGenerator {
 	 */
 	public static int randomInt (int r) {
         return rGen.nextInt(r);
+	}
+	
+	/**
+	 * Generates a random book.
+	 * @return int
+	 */
+	public static boolean randomBool() {
+        return rGen.nextBoolean();
 	}
 }

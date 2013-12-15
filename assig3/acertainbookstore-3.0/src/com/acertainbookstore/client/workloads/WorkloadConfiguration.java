@@ -13,10 +13,12 @@ import com.acertainbookstore.interfaces.StockManager;
  * 
  */
 public class WorkloadConfiguration {
-	private int numBooksToBuy = 5;
-	private int numEditorPicksToGet = 10;
-	private int numAddCopies = 10;
-	private int numBooksToAdd = 5;
+	private int numBooksToBuy = 5;			// customer
+	private int numEditorPicksToGet = 10;	// customer
+	private int numAmountToBuy = 3;		// customer
+	private int numReplenishBooks = 10;	// manager replenish
+	private int numReplenishCopies = 10;	// manager replenish
+	private int numBooksToAdd = 5;			// manager add new
 	private int warmUpRuns = 100;
 	private int numActualRuns = 500;
 	private float percentRareStockManagerInteraction = 10f;
@@ -97,14 +99,6 @@ public class WorkloadConfiguration {
 		this.numActualRuns = numActualRuns;
 	}
 
-	public int getNumBookToBuy() {
-		return numBooksToBuy;
-	}
-
-	public void setNumBookToBuy(int numBookToBuy) {
-		this.numBooksToBuy = numBookToBuy;
-	}
-
 	public int getNumEditorPicksToGet() {
 		return numEditorPicksToGet;
 	}
@@ -113,20 +107,36 @@ public class WorkloadConfiguration {
 		this.numEditorPicksToGet = numEditorPicksToGet;
 	}
 
-	public int getNumAddCopies() {
-		return numAddCopies;
-	}
-
-	public void setNumAddCopies(int numAddCopies) {
-		this.numAddCopies = numAddCopies;
-	}
-
 	public BookSetGenerator getBookSetGenerator() {
 		return bookSetGenerator;
 	}
 
 	public void setBookSetGenerator(BookSetGenerator bookSetGenerator) {
 		this.bookSetGenerator = bookSetGenerator;
+	}
+
+	public int getNumReplenishBooks() {
+		return numReplenishBooks;
+	}
+
+	public void setNumReplenishBooks(int numReplenishBooks) {
+		this.numReplenishBooks = numReplenishBooks;
+	}
+
+	public int getNumReplenishCopies() {
+		return numReplenishCopies;
+	}
+
+	public void setNumReplenishCopies(int numReplenishCopies) {
+		this.numReplenishCopies = numReplenishCopies;
+	}
+
+	public int getNumAmountToBuy() {
+		return numAmountToBuy;
+	}
+
+	public void setNumAmountToBuy(int numAmountToBuy) {
+		this.numAmountToBuy = numAmountToBuy;
 	}
 
 }

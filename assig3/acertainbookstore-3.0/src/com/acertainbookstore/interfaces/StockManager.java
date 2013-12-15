@@ -60,4 +60,6 @@ public interface StockManager {
 	 */
 	public void updateEditorPicks(Set<BookEditorPick> editorPicks) throws BookStoreException;
 
+	public void reset() throws BookStoreException;
+
 }
