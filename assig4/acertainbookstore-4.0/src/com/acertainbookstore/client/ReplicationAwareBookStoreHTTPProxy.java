@@ -10,6 +10,7 @@ import java.net.URLEncoder;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
 
 import org.eclipse.jetty.client.ContentExchange;
@@ -39,8 +40,9 @@ public class ReplicationAwareBookStoreHTTPProxy implements BookStore {
 	private HttpClient client;
 	private Set<String> slaveAddresses;
 	private String masterAddress;
-	private String filePath = "/universe/pcsd/acertainbookstore/src/proxy.properties";
+	private String filePath = "src/proxy.properties";
 	private volatile long snapshotId = 0;
+	Random random;
 
 	public long getSnapshotId() {
 		return snapshotId;
@@ -54,6 +56,9 @@ public class ReplicationAwareBookStoreHTTPProxy implements BookStore {
 	 * Initialize the client object
 	 */
 	public ReplicationAwareBookStoreHTTPProxy() throws Exception {
+		
+		random = new Random();
+		
 		initializeReplicationAwareMappings();
 		client = new HttpClient();
 		client.setConnectorType(HttpClient.CONNECTOR_SELECT_CHANNEL);
@@ -102,9 +107,35 @@ public class ReplicationAwareBookStoreHTTPProxy implements BookStore {
 	}
 
 	public String getReplicaAddress() {
-		return ""; // TODO
+		int rand = random.nextInt(slaveAddresses.size());
+		int i = 0;
+		for(String addr : slaveAddresses){
+		    if (rand == i++){
+		        return addr;
+		    }
+		}
+		return this.getMasterServerAddress();
 	}
 
+	public BookStoreResult SendAndRecvToReplicate(ContentExchange exchange, String urlString) throws BookStoreException{
+		boolean success = false;
+		
+		// Try slaves first
+		while(!success && this.slaveAddresses.size() > 0){
+			String addr = getReplicaAddress();
+			exchange.setURL(addr + urlString);
+			try{
+				return BookStoreUtility.SendAndRecv(this.client, exchange);
+			} catch(BookStoreException ex){
+				this.slaveAddresses.remove(addr + urlString);
+			}
+		}
+		
+		// Try master
+		exchange.setURL(getMasterServerAddress() + urlString);
+		return BookStoreUtility.SendAndRecv(this.client, exchange);
+	}
+	
 	public String getMasterServerAddress() {
 		return this.masterAddress;
 	}

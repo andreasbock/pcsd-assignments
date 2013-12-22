@@ -14,7 +14,7 @@ public class SlaveBookStoreHTTPServer {
 	 */
 	public static void main(String[] args) {
 		SlaveBookStoreHTTPMessageHandler handler = new SlaveBookStoreHTTPMessageHandler();
-		if (BookStoreHTTPServerUtility.createServer(8082, handler)) {
+		if (BookStoreHTTPServerUtility.createServer(Integer.parseInt(args[0]), handler)) { //8082
 			;
 		}
 	}

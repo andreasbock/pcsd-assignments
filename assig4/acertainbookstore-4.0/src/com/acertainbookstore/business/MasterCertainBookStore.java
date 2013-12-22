@@ -34,7 +34,7 @@ public class MasterCertainBookStore implements ReplicatedBookStore,
 	private Replicator replicator = null;
 	private Set<String> slaveServers;
 	private static int maxReplicatorThreads = 10;
-	private static String filePath = "/universe/pcsd/acertainbookstore/src/server.properties";
+	private static String filePath = "src/server.properties";
 
 	private MasterCertainBookStore() throws Exception {
 		bookStore = CertainBookStore.getInstance();
@@ -77,7 +77,8 @@ public class MasterCertainBookStore implements ReplicatedBookStore,
 	}
 
 	private void waitForSlaveUpdates(
-			List<Future<ReplicationResult>> replicatedSlaveFutures) {
+			List<Future<ReplicationResult>> replicatedSlaveFutures) 
+	{
 		List<ReplicationResult> slaveServers = new ArrayList<ReplicationResult>();
 		for (Future<ReplicationResult> slaveServer : replicatedSlaveFutures) {
 			try {

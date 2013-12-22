@@ -146,11 +146,18 @@ public final class BookStoreUtility {
 		int exchangeState;
 		try {
 			client.send(exchange);
-		} catch (IOException ex) {
+		} catch(java.net.ConnectException ex) {
 			throw new BookStoreException(
 					BookStoreClientConstants.strERR_CLIENT_REQUEST_SENDING, ex);
 		}
-
+		catch (IOException ex) {
+			throw new BookStoreException(
+					BookStoreClientConstants.strERR_CLIENT_REQUEST_SENDING, ex);
+		}
+		catch(Throwable e){
+			  System.out.println(e.getClass().getName());
+		}
+		
 		try {
 			exchangeState = exchange.waitForDone(); // block until the response
 													// is available

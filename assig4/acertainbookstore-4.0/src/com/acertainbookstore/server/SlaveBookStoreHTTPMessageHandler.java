@@ -14,7 +14,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
+import com.acertainbookstore.business.BookCopy;
+import com.acertainbookstore.business.BookEditorPick;
+import com.acertainbookstore.business.MasterCertainBookStore;
+import com.acertainbookstore.business.ReplicationRequest;
 import com.acertainbookstore.business.SlaveCertainBookStore;
+import com.acertainbookstore.business.StockBook;
 import com.acertainbookstore.utils.BookStoreConstants;
 import com.acertainbookstore.utils.BookStoreException;
 import com.acertainbookstore.utils.BookStoreMessageTag;
@@ -38,6 +43,7 @@ public class SlaveBookStoreHTTPMessageHandler extends AbstractHandler {
 		String numBooksString = null;
 		int numBooks = -1;
 		String requestURI;
+		String xml;
 
 		response.setContentType("text/html;charset=utf-8");
 		response.setStatus(HttpServletResponse.SC_OK);
@@ -62,6 +68,72 @@ public class SlaveBookStoreHTTPMessageHandler extends AbstractHandler {
 
 			// Write requests should not be handled
 			switch (messageTag) {
+			
+			case REPLICATE:
+				xml = BookStoreUtility
+					.extractPOSTDataFromRequest(request);
+
+				ReplicationRequest repRequest = (ReplicationRequest) BookStoreUtility
+						.deserializeXMLStringToObject(xml);
+				
+				switch(repRequest.getMessageType()){
+				case ADDBOOKS:
+					
+					BookStoreResponse bookStoreresponse = new BookStoreResponse();
+					try {
+						bookStoreresponse.setResult(MasterCertainBookStore
+								.getInstance().addBooks((Set<StockBook>) repRequest.getDataSet()));
+					} catch (BookStoreException ex) {
+						bookStoreresponse.setException(ex);
+					}
+
+					response.getWriter().println(
+							BookStoreUtility
+									.serializeObjectToXMLString(bookStoreresponse));
+					break;
+				case ADDCOPIES:
+					bookStoreresponse = new BookStoreResponse();
+					try {
+						bookStoreresponse.setResult(MasterCertainBookStore
+								.getInstance().addCopies((Set<BookCopy>) repRequest.getDataSet()));
+					} catch (BookStoreException ex) {
+						bookStoreresponse.setException(ex);
+					}
+					response.getWriter().println(
+							BookStoreUtility
+									.serializeObjectToXMLString(bookStoreresponse));
+					break;
+				case BUYBOOKS:
+					// Make the purchase
+					bookStoreresponse = new BookStoreResponse();
+					try {
+						bookStoreresponse.setResult(MasterCertainBookStore
+								.getInstance().buyBooks((Set<BookCopy>) repRequest.getDataSet()));
+					} catch (BookStoreException ex) {
+						bookStoreresponse.setException(ex);
+					}
+					response.getWriter().println(
+							BookStoreUtility
+									.serializeObjectToXMLString(bookStoreresponse));
+					break;
+				case UPDATEEDITORPICKS:
+					bookStoreresponse = new BookStoreResponse();
+
+					try {
+						bookStoreresponse.setResult(MasterCertainBookStore
+								.getInstance().updateEditorPicks(
+										(Set<BookEditorPick>) repRequest.getDataSet()));
+					} catch (BookStoreException ex) {
+						bookStoreresponse.setException(ex);
+					}
+					response.getWriter().println(
+							BookStoreUtility
+									.serializeObjectToXMLString(bookStoreresponse));
+					break;
+				default:
+					break;
+				}
+				break;
 
 			case LISTBOOKS:
 				BookStoreResponse bookStoreresponse = new BookStoreResponse();
@@ -77,7 +149,7 @@ public class SlaveBookStoreHTTPMessageHandler extends AbstractHandler {
 				break;
 
 			case GETBOOKS:
-				String xml = BookStoreUtility
+				xml = BookStoreUtility
 						.extractPOSTDataFromRequest(request);
 				Set<Integer> isbnSet = (Set<Integer>) BookStoreUtility
 						.deserializeXMLStringToObject(xml);
