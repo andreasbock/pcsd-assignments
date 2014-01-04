@@ -36,10 +36,14 @@ public class AccountManagerPartition {
 		accounts.get(accountIdDest).creditAccount(amount);
 	}
 
-	public synchronized double performCalculateExposure(int branchId)
-			throws InexistentBranchException {
-		// TODO Auto-generated method stub
-		return 0;
+	public synchronized double performCalculateExposure() {
+		double trouble = 0; // GET IT??? HUR HUR HUR
+		
+		for (Account acc : accounts.values()) {
+			trouble += acc.overdraft();
+		}
+		
+		return trouble;
 	}
 	
 	public boolean containsAccount (int accountId) {

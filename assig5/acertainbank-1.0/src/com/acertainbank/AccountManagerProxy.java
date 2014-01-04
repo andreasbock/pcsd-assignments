@@ -65,7 +65,10 @@ public class AccountManagerProxy implements AccountManager {
 	@Override
 	public double calculateExposure(int branchId)
 			throws InexistentBranchException {
-		// TODO Auto-generated method stub
-		return 0;
+		// Look up branch
+		if (!branches.containsKey(branchId)) {
+			throw new InexistentBranchException();
+		} 
+		return branches.get(branchId).performCalculateExposure();
 	}
 }
