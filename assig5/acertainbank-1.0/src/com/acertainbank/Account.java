@@ -1,13 +1,16 @@
 package com.acertainbank;
 
 public class Account {
-	private int balance;
+	private double balance;
 
-	public int getBalance() {
+	public double getBalance() {
 		return balance;
 	}
 
-	public void setBalance(int balance) {
-		this.balance = balance;
+	public void creditAccount(double amount) {
+		this.balance += amount;
+	}
+	public void debitAccount(double amount) {
+		this.balance -= amount;
 	}
 }

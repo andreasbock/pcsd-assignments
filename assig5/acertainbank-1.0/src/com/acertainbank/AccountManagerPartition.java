@@ -5,28 +5,38 @@ import java.util.HashMap;
 public class AccountManagerPartition {
 	private HashMap<Integer, Account> accounts;
 	
-	public void performCredit(int accountId, double amount)
-			throws InexistentBranchException, InexistentAccountException,
-			NegativeAmountException {
-		// TODO Auto-generated method stub
-
-	}
-
-	public void performDebit(int accountId, double amount)
-			throws InexistentBranchException, InexistentAccountException,
-			NegativeAmountException {
-		// TODO Auto-generated method stub
-
+	public synchronized void performCredit(int accountId, double amount)
+		throws InexistentAccountException {
+	// Look up account
+	if (this.containsAccount(accountId)) {
+		throw new InexistentAccountException(accountId);
 	}
 	
-	public void performTransfer(int accountIdOrig, int accountIdDest, double amount)
-			throws InexistentBranchException, InexistentAccountException,
-			NegativeAmountException {
-		// TODO Auto-generated method stub
-
+	accounts.get(accountId).creditAccount(amount);
 	}
 
-	public double performCalculateExposure(int branchId)
+	public synchronized void performDebit(int accountId, double amount)
+			throws InexistentAccountException {
+		// Look up account
+		if (this.containsAccount(accountId)) {
+			throw new InexistentAccountException(accountId);
+		}
+		accounts.get(accountId).debitAccount(amount);
+	}
+	
+	public synchronized void performTransfer(int accountIdOrig, int accountIdDest, double amount)
+			throws InexistentAccountException {
+		if (this.containsAccount(accountIdOrig)) {
+			throw new InexistentAccountException(accountIdOrig);
+		}
+		if (this.containsAccount(accountIdDest)) {
+			throw new InexistentAccountException(accountIdDest);
+		}
+		accounts.get(accountIdOrig).debitAccount(amount);
+		accounts.get(accountIdDest).creditAccount(amount);
+	}
+
+	public synchronized double performCalculateExposure(int branchId)
 			throws InexistentBranchException {
 		// TODO Auto-generated method stub
 		return 0;
@@ -35,5 +45,4 @@ public class AccountManagerPartition {
 	public boolean containsAccount (int accountId) {
 		return accounts.containsKey(accountId);
 	}
-	
 }

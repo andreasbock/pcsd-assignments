@@ -17,14 +17,10 @@ public class AccountManagerProxy implements AccountManager {
 		// Look up branch
 		if (!branches.containsKey(branchId)) {
 			throw new InexistentBranchException();
-		} 
+		}
 		
 		// Look up account
 		AccountManagerPartition partition = branches.get(branchId);
-		if (!partition.containsAccount(accountId)) {
-			throw new InexistentAccountException();
-		}
-		
 		partition.performCredit(accountId, amount);
 	}
 
@@ -44,10 +40,6 @@ public class AccountManagerProxy implements AccountManager {
 		
 		// Look up account
 		AccountManagerPartition partition = branches.get(branchId);
-		if (!partition.containsAccount(accountId)) {
-			throw new InexistentAccountException();
-		}
-		
 		partition.performDebit(accountId, amount);	
 	}
 
@@ -64,16 +56,8 @@ public class AccountManagerProxy implements AccountManager {
 		if (!branches.containsKey(branchId)) {
 			throw new InexistentBranchException();
 		} 
-		
-		// Look up accounts
+	
 		AccountManagerPartition partition = branches.get(branchId);
-		if (!partition.containsAccount(accountIdOrig)) {
-			throw new InexistentAccountException(accountIdOrig);
-		}
-		if (!partition.containsAccount(accountIdDest)) {
-			throw new InexistentAccountException(accountIdDest);
-		}
-		
 		partition.performTransfer(accountIdOrig, accountIdDest, amount);	
 
 	}
@@ -84,5 +68,4 @@ public class AccountManagerProxy implements AccountManager {
 		// TODO Auto-generated method stub
 		return 0;
 	}
-
 }
