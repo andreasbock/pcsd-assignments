@@ -1,18 +1,18 @@
-package com.acertainbank;
-
+package com.acertainbank.business;
 import java.util.HashMap;
 
-public class AccountManagerProxy implements AccountManager {
-	public static HashMap<Integer, AccountManagerPartition> branches;
-	
+import com.acertainbank.interfaces.AccountManager;
+import com.acertainbank.util.InexistentAccountException;
+import com.acertainbank.util.InexistentBranchException;
+import com.acertainbank.util.NegativeAmountException;
+
+public class AccountManagerPartition implements AccountManager {
+	private HashMap<Integer, Branch> branches;
+
 	@Override
 	public void credit(int branchId, int accountId, double amount)
 			throws InexistentBranchException, InexistentAccountException,
 			NegativeAmountException {
-		// Validate amount
-		if (amount < 0) {
-			throw new NegativeAmountException();
-		}
 		
 		// Look up branch
 		if (!branches.containsKey(branchId)) {
@@ -20,18 +20,15 @@ public class AccountManagerProxy implements AccountManager {
 		}
 		
 		// Look up account
-		AccountManagerPartition partition = branches.get(branchId);
-		partition.performCredit(accountId, amount);
+		Branch branch = branches.get(branchId);
+		branch.performCredit(accountId, amount);
 	}
 
 	@Override
 	public void debit(int branchId, int accountId, double amount)
 			throws InexistentBranchException, InexistentAccountException,
 			NegativeAmountException {
-		// Validate amount
-		if (amount < 0) {
-			throw new NegativeAmountException();
-		}
+		
 		
 		// Look up branch
 		if (!branches.containsKey(branchId)) {
@@ -39,8 +36,8 @@ public class AccountManagerProxy implements AccountManager {
 		} 
 		
 		// Look up account
-		AccountManagerPartition partition = branches.get(branchId);
-		partition.performDebit(accountId, amount);	
+		Branch branch = branches.get(branchId);
+		branch.performDebit(accountId, amount);	
 	}
 
 	@Override
@@ -57,8 +54,8 @@ public class AccountManagerProxy implements AccountManager {
 			throw new InexistentBranchException();
 		} 
 	
-		AccountManagerPartition partition = branches.get(branchId);
-		partition.performTransfer(accountIdOrig, accountIdDest, amount);	
+		Branch branch = branches.get(branchId);
+		branch.performTransfer(accountIdOrig, accountIdDest, amount);	
 
 	}
 
@@ -70,5 +67,14 @@ public class AccountManagerProxy implements AccountManager {
 			throw new InexistentBranchException();
 		} 
 		return branches.get(branchId).performCalculateExposure();
+	}
+
+	@Override
+	public int createAccount(int branchId) throws InexistentBranchException {
+		// Look up branch
+		if (!branches.containsKey(branchId)) {
+			throw new InexistentBranchException();
+		} 
+		return branches.get(branchId).performCreateAccount();
 	}
 }

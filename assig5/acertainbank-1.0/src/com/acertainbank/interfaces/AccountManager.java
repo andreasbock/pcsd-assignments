@@ -1,4 +1,9 @@
-package com.acertainbank;
+package com.acertainbank.interfaces;
+
+import com.acertainbank.util.InexistentAccountException;
+import com.acertainbank.util.InexistentBranchException;
+import com.acertainbank.util.NegativeAmountException;
+
 
 /**
  * This interface defines the operations that are used
@@ -78,4 +83,16 @@ public interface AccountManager {
 	 * in the system.
 	 */
 	double calculateExposure (int branchId) throws InexistentBranchException;
+	
+	/**
+	 * Creates a new account on a branch. 
+	 * Returns the account number of the new accounts
+	 * Note that account numbers are only unique in respect
+	 * to a given branch.
+	 * 
+	 * @param branchId Branch that account should be added to
+	 * @return New account number
+	 * @throws InexistentBranchException
+	 */
+	int createAccount (int branchId) throws InexistentBranchException;
 }

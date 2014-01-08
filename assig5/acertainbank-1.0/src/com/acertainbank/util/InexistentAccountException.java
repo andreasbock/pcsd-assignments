@@ -1,4 +1,5 @@
-package com.acertainbank;
+package com.acertainbank.util;
+
 
 /**
  * This Exception is thrown when the branch and account ID
